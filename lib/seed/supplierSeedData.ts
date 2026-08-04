@@ -1,0 +1,657 @@
+import { ISupplier } from "@/lib/types/supplier";
+
+export const INITIAL_SUPPLIERS_SEED: Partial<ISupplier>[] = [
+  {
+    code: "SUP-1001",
+    name: "Foxconn Electronics Shenzhen",
+    companyName: "Hon Hai Precision Industry (Foxconn)",
+    taxId: "CN-9144030060795412X",
+    industry: "Consumer Electronics & Assemblies",
+    status: "Preferred",
+    paymentTerms: "Net 60",
+    creditLimit: 250000,
+    outstandingBalance: 34500.0,
+    pendingInvoicesCount: 2,
+    totalPurchasesValue: 482900.0,
+    website: "https://www.foxconn.com",
+    rating: "99.2% Quality",
+    activePOs: 3,
+    leadTime: "4 Days",
+
+    contact: "Wei Zhang",
+    email: "orders@foxconn-sz.cn",
+    phone: "+86 755 8399 1000",
+
+    address: {
+      street: "2 East Ring Road, Longhua Industrial Park",
+      city: "Shenzhen",
+      state: "Guangdong",
+      postalCode: "518109",
+      country: "China",
+      addressType: "Primary Manufacturing HQ",
+    },
+
+    contacts: [
+      {
+        id: "cnt-101",
+        name: "Wei Zhang",
+        role: "Global Key Account Manager",
+        email: "wei.zhang@foxconn-sz.cn",
+        phone: "+86 755 8399 1001",
+        isPrimary: true,
+      },
+      {
+        id: "cnt-102",
+        name: "Li Na Chen",
+        role: "Quality & Compliance Engineer",
+        email: "lina.chen@foxconn-sz.cn",
+        phone: "+86 755 8399 1045",
+        isPrimary: false,
+      },
+      {
+        id: "cnt-103",
+        name: "David Miller",
+        role: "North America Logistics Coordinator",
+        email: "d.miller@foxconn-us.com",
+        phone: "+1 (408) 912-3344",
+        isPrimary: false,
+      },
+    ],
+
+    products: [
+      {
+        id: "sp-1",
+        sku: "DISP-IP15PM-OLED",
+        name: "iPhone 15 Pro Max Super Retina XDR OLED",
+        category: "Displays",
+        unitCost: 145.0,
+        moq: 50,
+        leadTimeDays: 4,
+      },
+      {
+        id: "sp-2",
+        sku: "DISP-IP14P-OLED",
+        name: "iPhone 14 Pro OLED Display Digitizer Assembly",
+        category: "Displays",
+        unitCost: 110.0,
+        moq: 30,
+        leadTimeDays: 4,
+      },
+      {
+        id: "sp-3",
+        sku: "DISP-IP13-OLED",
+        name: "iPhone 13 OLED Display Screen",
+        category: "Displays",
+        unitCost: 82.0,
+        moq: 50,
+        leadTimeDays: 3,
+      },
+    ],
+
+    performance: {
+      overallScore: 99.2,
+      qualityPassRate: 99.5,
+      onTimeDeliveryRate: 98.4,
+      avgDeliveryDays: 3.8,
+      defectiveRate: 0.5,
+      totalOrdersFulfilled: 124,
+    },
+
+    documents: [
+      {
+        id: "doc-1",
+        title: "Master Supply Agreement (2025-2027)",
+        type: "Contract",
+        fileUrl: "https://shelfsense.internal/docs/contracts/foxconn_msa_2025.pdf",
+        fileSize: "2.4 MB",
+        uploadedAt: "2025-01-15",
+      },
+      {
+        id: "doc-2",
+        title: "ISO 9001:2015 Quality Management Certificate",
+        type: "ISO Certification",
+        fileUrl: "https://shelfsense.internal/docs/certs/foxconn_iso9001.pdf",
+        fileSize: "1.1 MB",
+        uploadedAt: "2025-03-10",
+      },
+      {
+        id: "doc-3",
+        title: "OEM Component Pricing Matrix Q3 2026",
+        type: "Price List",
+        fileUrl: "https://shelfsense.internal/docs/prices/foxconn_pricing_q3.xlsx",
+        fileSize: "840 KB",
+        uploadedAt: "2026-06-28",
+      },
+    ],
+
+    communications: [
+      {
+        id: "comm-1",
+        type: "Meeting",
+        subject: "Q3 High-Yield OLED Supply Allocation Sync",
+        summary: "Discussed priority shipment for iPhone 15 Pro Max panels. Guaranteed lead time reduced to 3.5 days for orders > 200 units.",
+        author: "Alex Rivers",
+        date: "2026-07-25",
+      },
+      {
+        id: "comm-2",
+        type: "Email",
+        subject: "Dispatched PO-2026-8810 Tracking & Custom Clearance",
+        summary: "Provided DHL Express AWB #9983412091 for 150 units of OLED assemblies bound for Queens NY Hub.",
+        author: "Wei Zhang",
+        date: "2026-07-28",
+      },
+      {
+        id: "comm-3",
+        type: "Call",
+        subject: "Credit Line Expansion Review",
+        summary: "Approved credit limit increase from $150k to $250k based on flawless 12-month payment record.",
+        author: "Sarah Jenkins",
+        date: "2026-07-12",
+      },
+    ],
+  },
+  {
+    code: "SUP-1002",
+    name: "Sunsky Technology Wholesale",
+    companyName: "Shenzhen Sunsky Technology Ltd",
+    taxId: "CN-9144030076045812Y",
+    industry: "Mobile Parts & Micro-Electronics",
+    status: "Active",
+    paymentTerms: "Net 30",
+    creditLimit: 100000,
+    outstandingBalance: 12800.0,
+    pendingInvoicesCount: 1,
+    totalPurchasesValue: 198400.0,
+    website: "https://www.sunsky-online.com",
+    rating: "97.8% Quality",
+    activePOs: 2,
+    leadTime: "6 Days",
+
+    contact: "Jack Ma",
+    email: "b2b@sunsky-online.com",
+    phone: "+86 755 8377 2200",
+
+    address: {
+      street: "Floor 4, Building A, Electronics City, Futian",
+      city: "Shenzhen",
+      state: "Guangdong",
+      postalCode: "518031",
+      country: "China",
+      addressType: "Central Distribution Center",
+    },
+
+    contacts: [
+      {
+        id: "cnt-201",
+        name: "Jack Ma",
+        role: "B2B Sales Representative",
+        email: "jack.ma@sunsky-online.com",
+        phone: "+86 755 8377 2201",
+        isPrimary: true,
+      },
+      {
+        id: "cnt-202",
+        name: "Jessica Wu",
+        role: "RMA & Warranty Coordinator",
+        email: "rma@sunsky-online.com",
+        phone: "+86 755 8377 2210",
+        isPrimary: false,
+      },
+    ],
+
+    products: [
+      {
+        id: "sp-4",
+        sku: "DISP-S24U-OLED",
+        name: "Galaxy S24 Ultra Dynamic AMOLED 2X Screen",
+        category: "Displays",
+        unitCost: 165.0,
+        moq: 20,
+        leadTimeDays: 6,
+      },
+      {
+        id: "sp-5",
+        sku: "BAT-S24U-5000",
+        name: "Galaxy S24 Ultra 5000mAh Battery Module",
+        category: "Batteries",
+        unitCost: 24.0,
+        moq: 100,
+        leadTimeDays: 5,
+      },
+    ],
+
+    performance: {
+      overallScore: 97.8,
+      qualityPassRate: 98.1,
+      onTimeDeliveryRate: 95.5,
+      avgDeliveryDays: 5.6,
+      defectiveRate: 1.2,
+      totalOrdersFulfilled: 88,
+    },
+
+    documents: [
+      {
+        id: "doc-4",
+        title: "Vendor Agreement & Terms",
+        type: "Contract",
+        fileUrl: "https://shelfsense.internal/docs/contracts/sunsky_agreement.pdf",
+        fileSize: "1.8 MB",
+        uploadedAt: "2025-05-20",
+      },
+      {
+        id: "doc-5",
+        title: "UL 2054 Battery Safety Certificate",
+        type: "Compliance",
+        fileUrl: "https://shelfsense.internal/docs/certs/sunsky_ul_cert.pdf",
+        fileSize: "920 KB",
+        uploadedAt: "2026-02-11",
+      },
+    ],
+
+    communications: [
+      {
+        id: "comm-4",
+        type: "Note",
+        subject: "Air Freight Shipping Delay Note",
+        summary: "Sunsky notified of typhoon-related flight cancellations causing 2-day delay on PO-8809.",
+        author: "Alex Rivers",
+        date: "2026-07-29",
+      },
+      {
+        id: "comm-5",
+        type: "Email",
+        subject: "Replacement Shipment Dispatched for RMA-400",
+        summary: "Shipped 15 replacement S24 Ultra batteries via Express Air with tracking #SF10293847.",
+        author: "Jessica Wu",
+        date: "2026-07-27",
+      },
+    ],
+  },
+  {
+    code: "SUP-1003",
+    name: "DJI & Parts Global Corp",
+    companyName: "SZ DJI Technology Co., Ltd.",
+    taxId: "CN-9144030058674201W",
+    industry: "Robotics & Drone Components",
+    status: "Preferred",
+    paymentTerms: "Net 30",
+    creditLimit: 180000,
+    outstandingBalance: 8500.0,
+    pendingInvoicesCount: 1,
+    totalPurchasesValue: 312000.0,
+    website: "https://www.dji.com",
+    rating: "99.8% Quality",
+    activePOs: 1,
+    leadTime: "2 Days",
+
+    contact: "Elena Vance",
+    email: "wholesale@dji-parts.com",
+    phone: "+1 (800) 412-9988",
+
+    address: {
+      street: "Sky City Tower A, High-Tech Industrial Park",
+      city: "Shenzhen",
+      state: "Guangdong",
+      postalCode: "518057",
+      country: "China",
+      addressType: "Global OEM Headquarters",
+    },
+
+    contacts: [
+      {
+        id: "cnt-301",
+        name: "Elena Vance",
+        role: "Senior Enterprise Partner Manager",
+        email: "elena.vance@dji-parts.com",
+        phone: "+1 (800) 412-9989",
+        isPrimary: true,
+      },
+      {
+        id: "cnt-302",
+        name: "Kenji Sato",
+        role: "Precision Hardware Specialist",
+        email: "kenji.sato@dji-parts.com",
+        phone: "+81 3 4510 8820",
+        isPrimary: false,
+      },
+    ],
+
+    products: [
+      {
+        id: "sp-6",
+        sku: "GIMB-M3P-4K",
+        name: "Mavic 3 Pro 4K Gimbal & Camera Assembly",
+        category: "Camera & Optics",
+        unitCost: 310.0,
+        moq: 10,
+        leadTimeDays: 2,
+      },
+      {
+        id: "sp-7",
+        sku: "BAT-M3P-5000",
+        name: "Mavic 3 Intelligent Flight Battery 5000mAh",
+        category: "Batteries",
+        unitCost: 125.0,
+        moq: 25,
+        leadTimeDays: 2,
+      },
+    ],
+
+    performance: {
+      overallScore: 99.8,
+      qualityPassRate: 99.9,
+      onTimeDeliveryRate: 99.2,
+      avgDeliveryDays: 2.1,
+      defectiveRate: 0.1,
+      totalOrdersFulfilled: 142,
+    },
+
+    documents: [
+      {
+        id: "doc-6",
+        title: "Authorized OEM Distributor Contract",
+        type: "Contract",
+        fileUrl: "https://shelfsense.internal/docs/contracts/dji_oem_distributor.pdf",
+        fileSize: "3.2 MB",
+        uploadedAt: "2024-11-10",
+      },
+      {
+        id: "doc-7",
+        title: "Mutual NDA Agreement",
+        type: "NDA",
+        fileUrl: "https://shelfsense.internal/docs/nda/dji_mnda.pdf",
+        fileSize: "450 KB",
+        uploadedAt: "2024-10-01",
+      },
+    ],
+
+    communications: [
+      {
+        id: "comm-6",
+        type: "Meeting",
+        subject: "Annual Preferred Partner Review",
+        summary: "Awarded DJI Gold Standard Supplier Status with instant 2-day delivery SLA guarantees.",
+        author: "Alex Rivers",
+        date: "2026-06-15",
+      },
+    ],
+  },
+  {
+    code: "SUP-1004",
+    name: "LG Display Parts Ltd",
+    companyName: "LG Display Co., Ltd.",
+    taxId: "KR-1078134902",
+    industry: "Display Panels & Micro-LED Solutions",
+    status: "Active",
+    paymentTerms: "Net 45",
+    creditLimit: 200000,
+    outstandingBalance: 19200.0,
+    pendingInvoicesCount: 2,
+    totalPurchasesValue: 364000.0,
+    website: "https://www.lgdisplay.com",
+    rating: "98.5% Quality",
+    activePOs: 1,
+    leadTime: "5 Days",
+
+    contact: "Min-ho Park",
+    email: "supply@lgdisplay-parts.kr",
+    phone: "+82 2 3777 1114",
+
+    address: {
+      street: "128 Yeoui-daero, Yeongdeungpo-gu",
+      city: "Seoul",
+      state: "Seoul",
+      postalCode: "07336",
+      country: "South Korea",
+      addressType: "Corporate HQ & R&D",
+    },
+
+    contacts: [
+      {
+        id: "cnt-401",
+        name: "Min-ho Park",
+        role: "Export Director",
+        email: "minho.park@lgdisplay-parts.kr",
+        phone: "+82 2 3777 1115",
+        isPrimary: true,
+      },
+    ],
+
+    products: [
+      {
+        id: "sp-8",
+        sku: "DISP-P8P-OLED",
+        name: "Google Pixel 8 Pro LTPO OLED Display",
+        category: "Displays",
+        unitCost: 128.0,
+        moq: 40,
+        leadTimeDays: 5,
+      },
+    ],
+
+    performance: {
+      overallScore: 98.5,
+      qualityPassRate: 98.9,
+      onTimeDeliveryRate: 97.5,
+      avgDeliveryDays: 4.8,
+      defectiveRate: 0.7,
+      totalOrdersFulfilled: 76,
+    },
+
+    documents: [
+      {
+        id: "doc-8",
+        title: "LG Display OEM Supply Contract",
+        type: "Contract",
+        fileUrl: "https://shelfsense.internal/docs/contracts/lg_supply.pdf",
+        fileSize: "2.1 MB",
+        uploadedAt: "2025-02-14",
+      },
+    ],
+
+    communications: [
+      {
+        id: "comm-7",
+        type: "Email",
+        subject: "Q4 OLED Panel Price Adjustments",
+        summary: "Sent updated price matrix reflecting 4% cost reduction due to production efficiency gains.",
+        author: "Min-ho Park",
+        date: "2026-07-20",
+      },
+    ],
+  },
+  {
+    code: "SUP-1005",
+    name: "Samsung Semiconductor Component Corp",
+    companyName: "Samsung Electronics Co., Ltd.",
+    taxId: "KR-1248100998",
+    industry: "NAND Storage & LPDDR Memory Modules",
+    status: "Preferred",
+    paymentTerms: "Net 60",
+    creditLimit: 500000,
+    outstandingBalance: 42000.0,
+    pendingInvoicesCount: 3,
+    totalPurchasesValue: 890000.0,
+    website: "https://semiconductor.samsung.com",
+    rating: "99.6% Quality",
+    activePOs: 2,
+    leadTime: "3 Days",
+
+    contact: "Soo-jin Kim",
+    email: "semi.orders@samsung.com",
+    phone: "+82 31 209 7114",
+
+    address: {
+      street: "1 Samsung-ro, Giheung-gu",
+      city: "Yongin-si",
+      state: "Gyeonggi-do",
+      postalCode: "17113",
+      country: "South Korea",
+      addressType: "Semiconductor Fab Complex",
+    },
+
+    contacts: [
+      {
+        id: "cnt-501",
+        name: "Soo-jin Kim",
+        role: "Global Semiconductor Sales VP",
+        email: "soojin.kim@samsung.com",
+        phone: "+82 31 209 7115",
+        isPrimary: true,
+      },
+      {
+        id: "cnt-502",
+        name: "Hwang Woo",
+        role: "NAND Flash Field Application Engineer",
+        email: "hwang.woo@samsung.com",
+        phone: "+82 31 209 8830",
+        isPrimary: false,
+      },
+    ],
+
+    products: [
+      {
+        id: "sp-9",
+        sku: "NAND-1TB-UFS4",
+        name: "1TB UFS 4.0 High-Speed NAND Flash Chip",
+        category: "IC Chips",
+        unitCost: 45.0,
+        moq: 100,
+        leadTimeDays: 3,
+      },
+      {
+        id: "sp-10",
+        sku: "RAM-16GB-LPDDR5X",
+        name: "16GB LPDDR5X DRAM Memory Package",
+        category: "IC Chips",
+        unitCost: 38.0,
+        moq: 100,
+        leadTimeDays: 3,
+      },
+    ],
+
+    performance: {
+      overallScore: 99.6,
+      qualityPassRate: 99.8,
+      onTimeDeliveryRate: 99.0,
+      avgDeliveryDays: 3.1,
+      defectiveRate: 0.2,
+      totalOrdersFulfilled: 210,
+    },
+
+    documents: [
+      {
+        id: "doc-9",
+        title: "Samsung Strategic Semiconductor Agreement",
+        type: "Contract",
+        fileUrl: "https://shelfsense.internal/docs/contracts/samsung_semi_contract.pdf",
+        fileSize: "4.5 MB",
+        uploadedAt: "2025-01-08",
+      },
+      {
+        id: "doc-10",
+        title: "ISO 14001 Environmental Certification",
+        type: "ISO Certification",
+        fileUrl: "https://shelfsense.internal/docs/certs/samsung_iso14001.pdf",
+        fileSize: "1.4 MB",
+        uploadedAt: "2025-06-18",
+      },
+    ],
+
+    communications: [
+      {
+        id: "comm-8",
+        type: "Meeting",
+        subject: "2027 NAND Allocation & Pricing Lock",
+        summary: "Secured guaranteed 50,000 unit allocation for UFS 4.0 modules for upcoming fiscal year.",
+        author: "Alex Rivers",
+        date: "2026-07-10",
+      },
+    ],
+  },
+  {
+    code: "SUP-1006",
+    name: "Murata Electronics Manufacturing",
+    companyName: "Murata Manufacturing Co., Ltd.",
+    taxId: "JP-6130001004123",
+    industry: "Passive Components & MLCC Capacitors",
+    status: "Under Review",
+    paymentTerms: "Net 30",
+    creditLimit: 75000,
+    outstandingBalance: 6400.0,
+    pendingInvoicesCount: 1,
+    totalPurchasesValue: 95000.0,
+    website: "https://www.murata.com",
+    rating: "96.4% Quality",
+    activePOs: 1,
+    leadTime: "7 Days",
+
+    contact: "Taro Tanaka",
+    email: "sales@murata-japan.jp",
+    phone: "+81 75 955 6111",
+
+    address: {
+      street: "10-1 Higashikotari 1-chome",
+      city: "Nagaokakyo-shi",
+      state: "Kyoto",
+      postalCode: "617-8555",
+      country: "Japan",
+      addressType: "Global Headquarters",
+    },
+
+    contacts: [
+      {
+        id: "cnt-601",
+        name: "Taro Tanaka",
+        role: "Export Account Specialist",
+        email: "t.tanaka@murata-japan.jp",
+        phone: "+81 75 955 6112",
+        isPrimary: true,
+      },
+    ],
+
+    products: [
+      {
+        id: "sp-11",
+        sku: "CAP-MLCC-10UF",
+        name: "10uF 16V SMD 0603 MLCC Capacitors (Reel of 4000)",
+        category: "IC Chips",
+        unitCost: 18.5,
+        moq: 10,
+        leadTimeDays: 7,
+      },
+    ],
+
+    performance: {
+      overallScore: 96.4,
+      qualityPassRate: 97.2,
+      onTimeDeliveryRate: 94.0,
+      avgDeliveryDays: 7.2,
+      defectiveRate: 1.8,
+      totalOrdersFulfilled: 34,
+    },
+
+    documents: [
+      {
+        id: "doc-11",
+        title: "Murata Component Datasheet Package",
+        type: "Compliance",
+        fileUrl: "https://shelfsense.internal/docs/certs/murata_datasheet.pdf",
+        fileSize: "5.1 MB",
+        uploadedAt: "2025-08-30",
+      },
+    ],
+
+    communications: [
+      {
+        id: "comm-9",
+        type: "Call",
+        subject: "Lead Time Reduction Discussion",
+        summary: "Discussed buffer inventory holding in Rotterdam warehouse to reduce lead time from 7 to 3 days.",
+        author: "Dirk Bakker",
+        date: "2026-07-22",
+      },
+    ],
+  },
+];
