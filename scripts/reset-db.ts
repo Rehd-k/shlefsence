@@ -20,7 +20,7 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/shelfsense";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://root:hJaJzbIv49UtuGLOqcLnerXCePc1wd6IG2wCsF6SLx9IZ5tFXvD2Xs264fpKAnk7@aeqbrsl90y35d145z9sw5cbq:27017/ijemoa?directConnection=true";
 
 async function main() {
   console.log("Connecting to MongoDB at:", MONGODB_URI);
@@ -39,7 +39,7 @@ async function main() {
   // Define Admin details
   const adminEmail = "admin@shelfsense.ng";
   const adminPassword = "Password123!";
-  
+
   console.log("Hashing password for admin user...");
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
