@@ -14,6 +14,7 @@ export interface ICustomerDocument extends Document {
   email: string;
   phone: string;
   address: ICustomerAddress;
+  warehouse: string;
   outstandingDebt: number;
   walletBalance: number;
   creditLimit: number;
@@ -95,6 +96,7 @@ const CustomerSchema = new Schema<ICustomerDocument>(
     email: { type: String, required: true, unique: true, index: true },
     phone: { type: String, required: true },
     address: { type: AddressSchema, required: true },
+    warehouse: { type: String, index: true, default: "Main Hub - Lagos" },
     outstandingDebt: { type: Number, required: true, default: 0 },
     walletBalance: { type: Number, required: true, default: 0 },
     creditLimit: { type: Number, required: true, default: 0 },

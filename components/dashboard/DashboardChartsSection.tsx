@@ -32,6 +32,7 @@ import {
   Layers,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 
 interface DashboardChartsSectionProps {
   dailySales: DailySalesPoint[];
@@ -50,9 +51,8 @@ export const DashboardChartsSection: React.FC<DashboardChartsSectionProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<"daily" | "monthly">("daily");
 
-  const formatCurrency = (val: number) => {
-    if (val >= 1000) return `$${(val / 1000).toFixed(1)}k`;
-    return `$${val}`;
+  const formatCurrencyLocal = (val: number) => {
+    return formatCurrencyCompact(val);
   };
 
   return (
@@ -114,7 +114,7 @@ export const DashboardChartsSection: React.FC<DashboardChartsSectionProps> = ({
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#33415522" />
                   <XAxis dataKey="dayLabel" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#94a3b8" }} />
-                  <YAxis axisLine={false} tickLine={false} tickFormatter={formatCurrency} tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                  <YAxis axisLine={false} tickLine={false} tickFormatter={formatCurrencyLocal} tick={{ fontSize: 11, fill: "#94a3b8" }} />
                   <Tooltip
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
@@ -123,7 +123,7 @@ export const DashboardChartsSection: React.FC<DashboardChartsSectionProps> = ({
                           <div className="bg-slate-900 text-white p-3 rounded-xl shadow-xl border border-slate-800 text-xs space-y-1">
                             <p className="font-bold text-slate-300">{data.date}</p>
                             <p className="text-indigo-400 font-extrabold text-sm">
-                              Sales: ${data.sales.toLocaleString()}
+                              Sales: {formatCurrency(data.sales)}
                             </p>
                             <p className="text-slate-400">Orders Processed: {data.orders}</p>
                           </div>
@@ -138,7 +138,7 @@ export const DashboardChartsSection: React.FC<DashboardChartsSectionProps> = ({
                 <BarChart data={monthlyRevenue} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#33415522" />
                   <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#94a3b8" }} />
-                  <YAxis axisLine={false} tickLine={false} tickFormatter={formatCurrency} tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                  <YAxis axisLine={false} tickLine={false} tickFormatter={formatCurrencyLocal} tick={{ fontSize: 11, fill: "#94a3b8" }} />
                   <Tooltip
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
@@ -146,9 +146,9 @@ export const DashboardChartsSection: React.FC<DashboardChartsSectionProps> = ({
                         return (
                           <div className="bg-slate-900 text-white p-3 rounded-xl shadow-xl border border-slate-800 text-xs space-y-1">
                             <p className="font-bold text-slate-300">{data.month} 2026</p>
-                            <p className="text-indigo-400 font-bold">Revenue: ${data.revenue.toLocaleString()}</p>
-                            <p className="text-rose-400 font-medium">COGS: ${data.cost.toLocaleString()}</p>
-                            <p className="text-emerald-400 font-bold">Gross Profit: ${data.grossProfit.toLocaleString()}</p>
+                            <p className="text-indigo-400 font-bold">Revenue: {formatCurrency(data.revenue)}</p>
+                            <p className="text-rose-400 font-medium">COGS: {formatCurrency(data.cost)}</p>
+                            <p className="text-emerald-400 font-bold">Gross Profit: {formatCurrency(data.grossProfit)}</p>
                           </div>
                         );
                       }
@@ -194,7 +194,7 @@ export const DashboardChartsSection: React.FC<DashboardChartsSectionProps> = ({
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(val: any) => [`$${Number(val).toLocaleString()}`, "Sales"]}
+                    formatter={(val: any) => [formatCurrency(Number(val)), "Sales"]}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -234,14 +234,14 @@ export const DashboardChartsSection: React.FC<DashboardChartsSectionProps> = ({
                 Top Selling Brands
               </h3>
             </div>
-            <span className="text-xs text-slate-400 font-medium">By Revenue ($)</span>
+            <span className="text-xs text-slate-400 font-medium">By Revenue</span>
           </div>
 
           <div className="h-60 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart layout="vertical" data={topBrands} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#33415522" />
-                <XAxis type="number" tickFormatter={formatCurrency} axisLine={false} tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                <XAxis type="number" tickFormatter={formatCurrencyLocal} axisLine={false} tick={{ fontSize: 11, fill: "#94a3b8" }} />
                 <YAxis dataKey="brand" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 600, fill: "#64748b" }} />
                 <Tooltip
                   content={({ active, payload }) => {
@@ -250,7 +250,7 @@ export const DashboardChartsSection: React.FC<DashboardChartsSectionProps> = ({
                       return (
                         <div className="bg-slate-900 text-white p-2.5 rounded-xl shadow-xl text-xs space-y-1">
                           <p className="font-bold">{data.brand}</p>
-                          <p className="text-indigo-400 font-semibold">Revenue: ${data.sales.toLocaleString()}</p>
+                          <p className="text-indigo-400 font-semibold">Revenue: {formatCurrency(data.sales)}</p>
                           <p className="text-slate-300">Units Sold: {data.unitsSold.toLocaleString()}</p>
                         </div>
                       );
@@ -296,7 +296,7 @@ export const DashboardChartsSection: React.FC<DashboardChartsSectionProps> = ({
 
                 <div className="text-right">
                   <p className="text-xs font-extrabold text-slate-900 dark:text-white">
-                    ${model.revenue.toLocaleString()}
+                    {formatCurrency(model.revenue)}
                   </p>
                   <div className="flex items-center justify-end gap-1.5">
                     <span className="text-[10px] text-slate-400 font-medium">{model.unitsSold} units</span>

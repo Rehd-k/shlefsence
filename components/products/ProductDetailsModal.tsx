@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { IProduct } from "@/lib/types/product";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 import {
   Package,
   Boxes,
@@ -174,9 +175,9 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
               <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
                 <span className="text-xs text-slate-400 font-bold uppercase">Wholesale Price</span>
                 <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400 font-mono mt-1">
-                  ₦{product.wholesalePrice.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                  {formatCurrency(product.wholesalePrice)}
                 </p>
-                <span className="text-[11px] text-slate-400">Retail: ₦{product.sellingPrice.toLocaleString("en-NG", { minimumFractionDigits: 2 })}</span>
+                <span className="text-[11px] text-slate-400">Retail: {formatCurrency(product.sellingPrice)}</span>
               </div>
 
               <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
@@ -265,14 +266,14 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                 <span className="text-xs text-slate-400 font-bold">Factory Unit Cost</span>
                 <p className="text-xl font-extrabold text-slate-800 dark:text-slate-200 font-mono mt-1">
-                  ₦{product.purchasePrice.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                  {formatCurrency(product.purchasePrice)}
                 </p>
               </div>
 
               <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900">
                 <span className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">B2B Wholesale Price</span>
                 <p className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400 font-mono mt-1">
-                  ₦{product.wholesalePrice.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                  {formatCurrency(product.wholesalePrice)}
                 </p>
                 <span className="text-[10px] text-indigo-500 font-bold">
                   Margin: {(((product.wholesalePrice - product.purchasePrice) / (product.wholesalePrice || 1)) * 100).toFixed(1)}%
@@ -282,7 +283,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
               <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900">
                 <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">Retail Selling Price</span>
                 <p className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono mt-1">
-                  ₦{product.sellingPrice.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                  {formatCurrency(product.sellingPrice)}
                 </p>
                 <span className="text-[10px] text-emerald-500 font-bold">
                   Margin: {(((product.sellingPrice - product.purchasePrice) / (product.sellingPrice || 1)) * 100).toFixed(1)}%
@@ -300,7 +301,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                   <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-bold uppercase text-[10px]">
                     <tr>
                       <th className="px-4 py-3">Minimum Order Quantity</th>
-                      <th className="px-4 py-3">Unit Tier Price (₦)</th>
+                      <th className="px-4 py-3">Unit Tier Price</th>
                       <th className="px-4 py-3">Discount Off Retail</th>
                     </tr>
                   </thead>
@@ -308,7 +309,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                     {product.pricingTiers?.map((tier, idx) => (
                       <tr key={idx}>
                         <td className="px-4 py-3 font-bold">{tier.minQty}+ units</td>
-                        <td className="px-4 py-3 font-mono font-extrabold text-indigo-600 dark:text-indigo-400">₦{tier.price.toLocaleString("en-NG", { minimumFractionDigits: 2 })}</td>
+                        <td className="px-4 py-3 font-mono font-extrabold text-indigo-600 dark:text-indigo-400">{formatCurrency(tier.price)}</td>
                         <td className="px-4 py-3 text-emerald-600 font-bold">-{tier.discountPercentage}% OFF</td>
                       </tr>
                     ))}

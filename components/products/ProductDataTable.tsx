@@ -5,6 +5,7 @@ import { IProduct } from "@/lib/types/product";
 import { Badge } from "@/components/ui/Badge";
 import { Printer, ExternalLink, Shield } from "lucide-react";
 import { clsx } from "clsx";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 
 interface ProductDataTableProps {
   products: IProduct[];
@@ -44,9 +45,9 @@ export const ProductDataTable: React.FC<ProductDataTableProps> = ({
               <th className="px-4 py-3">Brand & Quality</th>
               <th className="px-4 py-3">Category</th>
               <th className="px-4 py-3">Supplier</th>
-              <th className="px-4 py-3 text-right">Cost (₦)</th>
-              <th className="px-4 py-3 text-right">Wholesale (₦)</th>
-              <th className="px-4 py-3 text-right">Retail (₦)</th>
+              <th className="px-4 py-3 text-right">Cost</th>
+              <th className="px-4 py-3 text-right">Wholesale</th>
+              <th className="px-4 py-3 text-right">Retail</th>
               <th className="px-4 py-3">Warehouse Bin</th>
               <th className="px-4 py-3">Stock Status</th>
               <th className="px-4 py-3 text-right">Actions</th>
@@ -110,17 +111,17 @@ export const ProductDataTable: React.FC<ProductDataTableProps> = ({
 
                   {/* Cost (₦) */}
                   <td className="px-4 py-3 text-right font-mono font-semibold text-slate-700 dark:text-slate-300">
-                    ₦{prod.purchasePrice.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                    {formatCurrency(prod.purchasePrice)}
                   </td>
 
                   {/* Wholesale (₦) */}
                   <td className="px-4 py-3 text-right font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                    ₦{prod.wholesalePrice.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                    {formatCurrency(prod.wholesalePrice)}
                   </td>
 
                   {/* Retail (₦) */}
                   <td className="px-4 py-3 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                    ₦{prod.sellingPrice.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                    {formatCurrency(prod.sellingPrice)}
                   </td>
 
                   {/* Warehouse & Shelf Bin */}

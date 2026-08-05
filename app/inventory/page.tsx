@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useLocation } from "@/lib/context/LocationContext";
 import { InventorySummaryCards } from "@/components/inventory/InventorySummaryCards";
 import { InventoryFilterBar } from "@/components/inventory/InventoryFilterBar";
 import { InventoryTable } from "@/components/inventory/InventoryTable";
@@ -30,7 +31,7 @@ import {
 export default function InventoryPage() {
   const [items, setItems] = useState<IInventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<string>("All Warehouses");
+  const { activeLocation } = useLocation();
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
 
   // Selected item for drawer view
@@ -67,8 +68,8 @@ export default function InventoryPage() {
     try {
       const queryParams = new URLSearchParams();
       if (filters.search) queryParams.set("search", filters.search);
-      if (filters.warehouse || selectedWarehouse !== "All Warehouses") {
-        queryParams.set("warehouse", filters.warehouse || selectedWarehouse);
+      if (filters.warehouse || (activeLocation !== "All Locations" && activeLocation !== "All Warehouses")) {
+        queryParams.set("warehouse", filters.warehouse || activeLocation);
       }
       if (filters.brand) queryParams.set("brand", filters.brand);
       if (filters.supplier) queryParams.set("supplier", filters.supplier);
@@ -98,7 +99,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     fetchInventory();
-  }, [filters, selectedWarehouse]);
+  }, [filters, activeLocation]);
 
   // Filter handlers
   const handleResetFilters = () => {
@@ -300,10 +301,7 @@ export default function InventoryPage() {
   }, [items, selectedRowIds]);
 
   return (
-    <AppLayout
-      activeWarehouse={selectedWarehouse}
-      onWarehouseChange={(wh) => setSelectedWarehouse(wh)}
-    >
+    <AppLayout>
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5">

@@ -12,12 +12,7 @@ export async function GET() {
   try {
     await connectToDatabase();
 
-    let claims = await WarrantyClaim.find({}).sort({ createdAt: -1 }).lean();
-
-    if (claims.length === 0) {
-      const seeded = await WarrantyClaim.insertMany(INITIAL_WARRANTY_CLAIMS);
-      claims = seeded.map((s) => s.toObject());
-    }
+    const claims = await WarrantyClaim.find({}).sort({ createdAt: -1 }).lean();
 
     const formatted = claims.map((c: any) => ({
       ...c,

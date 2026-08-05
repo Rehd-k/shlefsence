@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useLocation } from "@/lib/context/LocationContext";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ShoppingBag, Plus, Search, Truck, RefreshCcw } from "lucide-react";
@@ -12,10 +13,22 @@ export default function PurchaseOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [isPOModalOpen, setIsPOModalOpen] = useState(false);
 
+  // Dynamic context and date filtering
+  const { activeLocation } = useLocation();
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const fetchPOs = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/purchase-orders");
+      const queryParams = new URLSearchParams();
+      if (activeLocation && activeLocation !== "All Locations" && activeLocation !== "All Warehouses") {
+        queryParams.set("warehouse", activeLocation);
+      }
+      if (startDate) queryParams.set("startDate", startDate);
+      if (endDate) queryParams.set("endDate", endDate);
+
+      const res = await fetch(`/api/purchase-orders?${queryParams.toString()}`);
       const json = await res.json();
       if (json.success) setPos(json.data);
     } catch (err) {
@@ -27,7 +40,7 @@ export default function PurchaseOrdersPage() {
 
   useEffect(() => {
     fetchPOs();
-  }, []);
+  }, [activeLocation, startDate, endDate]);
 
   const handlePOCreated = async (newPO: any) => {
     try {
@@ -76,6 +89,43 @@ export default function PurchaseOrdersPage() {
             Create Purchase Order
           </Button>
         </div>
+      </div>
+
+      {/* Date Range & Location Context Panel */}
+      <div className="flex flex-wrap items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs text-xs mb-4">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-slate-500">From Date:</span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-900 dark:text-white"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-slate-500">To Date:</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-900 dark:text-white"
+          />
+        </div>
+        {(startDate || endDate) && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setStartDate("");
+              setEndDate("");
+            }}
+          >
+            Clear Range
+          </Button>
+        )}
+        <span className="text-[11px] text-slate-400 font-medium ml-auto">
+          Active Location: <b className="text-indigo-600 dark:text-indigo-400">{activeLocation}</b>
+        </span>
       </div>
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">

@@ -1,25 +1,49 @@
-/**
- * Utility for formatting monetary amounts in Nigerian Naira (₦).
- */
-export function formatNaira(amount: number): string {
-  if (isNaN(amount) || amount === null || amount === undefined) {
-    return "₦0.00";
+function getCurrencySymbol(): string {
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("shelfsense_settings");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.currencyDefault) {
+          return parsed.currencyDefault;
+        }
+      }
+    } catch (e) {
+      // Ignore errors in SSR or JSON parsing
+    }
   }
-  return `₦${amount.toLocaleString("en-NG", {
+  return "₦";
+}
+
+/**
+ * Utility for formatting monetary amounts dynamically based on system settings.
+ */
+export function formatCurrency(amount: number): string {
+  const symbol = getCurrencySymbol();
+  if (isNaN(amount) || amount === null || amount === undefined) {
+    return `${symbol}0.00`;
+  }
+  const locale = symbol === "₦" ? "en-NG" : "en-US";
+  return `${symbol}${amount.toLocaleString(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 }
 
-export function formatNairaCompact(amount: number): string {
+export function formatCurrencyCompact(amount: number): string {
+  const symbol = getCurrencySymbol();
   if (isNaN(amount) || amount === null || amount === undefined) {
-    return "₦0";
+    return `${symbol}0`;
   }
   if (amount >= 1_000_000) {
-    return `₦${(amount / 1_000_000).toFixed(1)}M`;
+    return `${symbol}${(amount / 1_000_000).toFixed(1)}M`;
   }
   if (amount >= 1_000) {
-    return `₦${(amount / 1_000).toFixed(1)}k`;
+    return `${symbol}${(amount / 1_000).toFixed(1)}k`;
   }
-  return `₦${amount.toFixed(0)}`;
+  return `${symbol}${amount.toFixed(0)}`;
 }
+
+// Fallback exports for backward compatibility
+export { formatCurrency as formatNaira, formatCurrencyCompact as formatNairaCompact };
+

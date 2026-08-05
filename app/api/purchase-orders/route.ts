@@ -8,16 +8,30 @@ const INITIAL_POS = [
   { poNumber: "PO-2026-8808", supplier: "DJI & Parts Global Corp", warehouse: "Central Hub - Texas", totalUnits: 80, totalValue: 12500.0, status: "Received & Putaway", expectedDate: "2026-07-28" },
 ];
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await connectToDatabase();
 
-    let pos = await PurchaseOrder.find({}).sort({ createdAt: -1 }).lean();
+    const { searchParams } = new URL(req.url);
+    const warehouse = searchParams.get("warehouse") || "";
+    const startDate = searchParams.get("startDate") || "";
+    const endDate = searchParams.get("endDate") || "";
 
-    if (pos.length === 0) {
-      const seeded = await PurchaseOrder.insertMany(INITIAL_POS);
-      pos = seeded.map((s) => s.toObject());
+    const query: any = {};
+    if (warehouse && warehouse !== "All Locations" && warehouse !== "All Warehouses") {
+      query.warehouse = warehouse;
     }
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
+
+    const pos = await PurchaseOrder.find(query).sort({ createdAt: -1 }).lean();
 
     const formatted = pos.map((po: any) => ({
       ...po,

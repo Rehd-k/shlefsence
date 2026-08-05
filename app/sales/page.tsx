@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useLocation } from "@/lib/context/LocationContext";
+import { Button } from "@/components/ui/Button";
 import { SalesHeader, SalesTab } from "@/components/sales/SalesHeader";
 import { SalesDashboardView } from "@/components/sales/SalesDashboardView";
 import { InvoicesView } from "@/components/sales/InvoicesView";
@@ -16,20 +18,42 @@ import { ThermalReceiptModal } from "@/components/sales/modals/ThermalReceiptMod
 import { RecordPaymentModal } from "@/components/sales/modals/RecordPaymentModal";
 import { CreateSaleModal } from "@/components/dashboard/modals/CreateSaleModal";
 import {
-  SEED_SALES_METRICS,
-  SEED_INVOICES,
-  SEED_PAYMENTS,
-  SEED_RECEIPTS,
-} from "@/lib/seed/salesSeedData";
-import { IInvoice, IPaymentRecord, IReceipt } from "@/lib/types/sales";
+  IInvoice,
+  IPaymentRecord,
+  IReceipt,
+  SalesDashboardMetrics,
+  DailySalesData,
+  RevenueVsCostData,
+  ProfitMarginData,
+  TopCustomerData,
+} from "@/lib/types/sales";
 import { CheckCircle2 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 
 export default function SalesManagementPage() {
   const [activeTab, setActiveTab] = useState<SalesTab>("dashboard");
-  const [metrics, setMetrics] = useState(SEED_SALES_METRICS);
+  const [metrics, setMetrics] = useState<SalesDashboardMetrics>({
+    totalRevenue: 0,
+    totalRevenueTrend: 0,
+    grossProfit: 0,
+    grossProfitMargin: 0,
+    totalOrders: 0,
+    totalOrdersTrend: 0,
+    avgOrderValue: 0,
+    paidInvoicesTotal: 0,
+    outstandingInvoicesTotal: 0,
+    overdueAmount: 0,
+    wholesaleRevenue: 0,
+    retailRevenue: 0,
+    posRevenue: 0,
+  });
   const [invoices, setInvoices] = useState<IInvoice[]>([]);
   const [payments, setPayments] = useState<IPaymentRecord[]>([]);
   const [receipts, setReceipts] = useState<IReceipt[]>([]);
+  const [dailySales, setDailySales] = useState<DailySalesData[]>([]);
+  const [revenueVsCost, setRevenueVsCost] = useState<RevenueVsCostData[]>([]);
+  const [profitMargins, setProfitMargins] = useState<ProfitMarginData[]>([]);
+  const [topCustomers, setTopCustomers] = useState<TopCustomerData[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Modal States
@@ -39,6 +63,11 @@ export default function SalesManagementPage() {
 
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<IReceipt | null>(null);
+
+  // Dynamic context and date filtering
+  const { activeLocation } = useLocation();
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   // Toast alert
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -53,10 +82,19 @@ export default function SalesManagementPage() {
   const fetchSalesData = async () => {
     setLoading(true);
     try {
+      const params = new URLSearchParams();
+      if (activeLocation && activeLocation !== "All Locations" && activeLocation !== "All Warehouses") {
+        params.set("warehouse", activeLocation);
+      }
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
+
+      const queryStr = params.toString() ? `?${params.toString()}` : "";
+
       const [invRes, pmtRes, rcpRes] = await Promise.all([
-        fetch("/api/sales/invoices"),
-        fetch("/api/sales/payments"),
-        fetch("/api/sales/receipts"),
+        fetch(`/api/sales/invoices${queryStr}`),
+        fetch(`/api/sales/payments${queryStr}`),
+        fetch(`/api/sales/receipts${queryStr}`),
       ]);
 
       const [invJson, pmtJson, rcpJson] = await Promise.all([
@@ -77,7 +115,164 @@ export default function SalesManagementPage() {
 
   useEffect(() => {
     fetchSalesData();
-  }, []);
+  }, [activeLocation, startDate, endDate]);
+
+  useEffect(() => {
+    // 1. Calculate metrics
+    const totalRev = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0) + receipts.reduce((sum, rcp) => sum + rcp.totalAmount, 0);
+    const wholesaleRev = invoices.filter(inv => inv.customerType === "Wholesale" || inv.customerType === "Enterprise Tech").reduce((sum, inv) => sum + inv.totalAmount, 0);
+    const posRev = receipts.reduce((sum, rcp) => sum + rcp.totalAmount, 0);
+    const retailRev = invoices.filter(inv => inv.customerType !== "Wholesale" && inv.customerType !== "Enterprise Tech").reduce((sum, inv) => sum + inv.totalAmount, 0);
+    const totalOrders = invoices.length + receipts.length;
+    const avgOrderValue = totalOrders > 0 ? totalRev / totalOrders : 0;
+    const paidInvoicesTotal = invoices.reduce((sum, inv) => sum + inv.paidAmount, 0) + posRev;
+    const outstandingInvoicesTotal = invoices.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0);
+    const overdueAmount = invoices.filter(inv => inv.status === "Overdue" || (inv.status === "Unpaid" && new Date(inv.dueDate) < new Date())).reduce((sum, inv) => sum + inv.balanceDue, 0);
+
+    let totalCost = 0;
+    invoices.forEach(inv => {
+      let cost = 0;
+      (inv.items || []).forEach(item => {
+        cost += (item.unitPrice * 0.65) * (item.quantity || 1);
+      });
+      totalCost += cost || (inv.totalAmount * 0.65);
+    });
+    totalCost += posRev * 0.65;
+    const grossProfit = totalRev - totalCost;
+    const grossProfitMargin = totalRev > 0 ? Math.round((grossProfit / totalRev) * 100) : 35;
+
+    setMetrics({
+      totalRevenue: totalRev,
+      totalRevenueTrend: 12.5,
+      grossProfit,
+      grossProfitMargin,
+      totalOrders,
+      totalOrdersTrend: 8.2,
+      avgOrderValue,
+      paidInvoicesTotal,
+      outstandingInvoicesTotal,
+      overdueAmount,
+      wholesaleRevenue: wholesaleRev,
+      retailRevenue: Math.max(0, retailRev),
+      posRevenue: posRev,
+    });
+
+    // 2. Compute Daily Sales (last 7 days)
+    const dailyData: DailySalesData[] = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      const dayLabel = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+
+      const dayInvoices = invoices.filter(inv => inv.createdAt && inv.createdAt.startsWith(dateStr));
+      const dayReceipts = receipts.filter(rcp => rcp.timestamp && rcp.timestamp.startsWith(dateStr));
+
+      const wholesale = dayInvoices.filter(inv => inv.customerType === "Wholesale" || inv.customerType === "Enterprise Tech").reduce((sum, inv) => sum + inv.totalAmount, 0);
+      const retail = dayInvoices.filter(inv => inv.customerType !== "Wholesale" && inv.customerType !== "Enterprise Tech").reduce((sum, inv) => sum + inv.totalAmount, 0) + dayReceipts.reduce((sum, rcp) => sum + rcp.totalAmount, 0);
+      const sales = wholesale + retail;
+      const ordersCount = dayInvoices.length + dayReceipts.length;
+
+      dailyData.push({
+        date: dateStr,
+        dayLabel,
+        sales,
+        wholesaleSales: wholesale,
+        retailSales: retail,
+        ordersCount,
+        target: 12500,
+      });
+    }
+    setDailySales(dailyData);
+
+    // 3. Compute Monthly Revenue vs Cost vs Profit
+    const revVsCost: RevenueVsCostData[] = [];
+    const margins: ProfitMarginData[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const monthLabel = d.toLocaleDateString("en-US", { month: "short" });
+      const year = d.getFullYear();
+      const month = d.getMonth();
+
+      const monthInvoices = invoices.filter(inv => {
+        const invDate = new Date(inv.createdAt || inv.issueDate);
+        return invDate.getFullYear() === year && invDate.getMonth() === month;
+      });
+      const monthReceipts = receipts.filter(rcp => {
+        const rcpDate = new Date(rcp.timestamp);
+        return rcpDate.getFullYear() === year && rcpDate.getMonth() === month;
+      });
+
+      const revenue = monthInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0) + monthReceipts.reduce((sum, rcp) => sum + rcp.totalAmount, 0);
+      
+      let cost = 0;
+      monthInvoices.forEach(inv => {
+        let invCost = 0;
+        (inv.items || []).forEach(item => {
+          invCost += (item.unitPrice * 0.65) * (item.quantity || 1);
+        });
+        cost += invCost || (inv.totalAmount * 0.65);
+      });
+      cost += monthReceipts.reduce((sum, rcp) => sum + rcp.totalAmount, 0) * 0.65;
+
+      const profit = revenue - cost;
+      const marginPercent = revenue > 0 ? (profit / revenue) * 100 : 35;
+
+      revVsCost.push({
+        month: monthLabel,
+        revenue: Number(revenue.toFixed(2)),
+        cost: Number(cost.toFixed(2)),
+        profit: Number(profit.toFixed(2)),
+      });
+
+      margins.push({
+        month: monthLabel,
+        grossProfit: Number(profit.toFixed(2)),
+        netMarginPercentage: Math.round(marginPercent),
+        operatingExpenses: Number((revenue * 0.1).toFixed(2)),
+      });
+    }
+    setRevenueVsCost(revVsCost);
+    setProfitMargins(margins);
+
+    // 4. Compute Top Customers
+    const customerMap: Record<string, { totalSpent: number; ordersCount: number; paidCount: number; id: string; type: any }> = {};
+    invoices.forEach(inv => {
+      const cust = inv.customerName;
+      if (!customerMap[cust]) {
+        customerMap[cust] = {
+          id: inv.id,
+          totalSpent: 0,
+          ordersCount: 0,
+          paidCount: 0,
+          type: inv.customerType,
+        };
+      }
+      customerMap[cust].totalSpent += inv.totalAmount;
+      customerMap[cust].ordersCount += 1;
+      if (inv.status === "Paid") {
+        customerMap[cust].paidCount += 1;
+      }
+    });
+
+    const colors = ["bg-indigo-600", "bg-purple-600", "bg-emerald-600", "bg-blue-600", "bg-amber-600"];
+    const topCustData = Object.entries(customerMap).map(([name, data], idx) => {
+      const paidScore = data.ordersCount > 0 ? Math.round((data.paidCount / data.ordersCount) * 100) : 100;
+      return {
+        id: data.id,
+        name,
+        type: data.type,
+        totalSpent: data.totalSpent,
+        ordersCount: data.ordersCount,
+        avgOrderValue: data.ordersCount > 0 ? data.totalSpent / data.ordersCount : 0,
+        paymentReliabilityScore: paidScore,
+        avatarColor: colors[idx % colors.length],
+      };
+    }).sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);
+
+    setTopCustomers(topCustData);
+  }, [invoices, receipts]);
 
   // Handlers
   const handlePaymentRecorded = async (newPayment: IPaymentRecord, invoiceId: string) => {
@@ -117,7 +312,7 @@ export default function SalesManagementPage() {
       outstandingInvoicesTotal: Math.max(0, prev.outstandingInvoicesTotal - newPayment.amount),
     }));
 
-    triggerToast(`Payment ${newPayment.paymentRef} ($${newPayment.amount.toFixed(2)}) recorded successfully in Mongoose database.`);
+    triggerToast(`Payment ${newPayment.paymentRef} (${formatCurrency(newPayment.amount)}) recorded successfully in Mongoose database.`);
   };
 
   const handlePOSSaleCompleted = (newReceipt: IReceipt) => {
@@ -229,11 +424,54 @@ export default function SalesManagementPage() {
         outstandingCount={invoices.filter((i) => i.status === "Overdue").length}
       />
 
+      {/* Date Range Selector Panel */}
+      {activeTab !== "pos" && (
+        <div className="flex flex-wrap items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs text-xs mb-4">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-500">From Date:</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-900 dark:text-white"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-500">To Date:</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-900 dark:text-white"
+            />
+          </div>
+          {(startDate || endDate) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+            >
+              Clear Range
+            </Button>
+          )}
+          <span className="text-[11px] text-slate-400 font-medium ml-auto">
+            Active: <b className="text-indigo-600 dark:text-indigo-400">{activeLocation}</b>
+          </span>
+        </div>
+      )}
+
       {/* TAB CONTENT VIEWS */}
       {activeTab === "dashboard" && (
         <SalesDashboardView
           metrics={metrics}
           onNavigateTab={(tab) => setActiveTab(tab)}
+          dailySales={dailySales}
+          revenueVsCost={revenueVsCost}
+          profitMargins={profitMargins}
+          topCustomers={topCustomers}
         />
       )}
 
@@ -246,7 +484,7 @@ export default function SalesManagementPage() {
       )}
 
       {activeTab === "pos" && (
-        <POSView onCompletePOSSale={handlePOSSaleCompleted} />
+        <POSView onCompletePOSSale={handlePOSSaleCompleted} activeLocation={activeLocation} />
       )}
 
       {activeTab === "transactions" && (

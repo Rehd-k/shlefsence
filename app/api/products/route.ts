@@ -27,18 +27,7 @@ export async function GET(req: Request) {
     if (category && category !== "All") query.category = category;
     if (quality && quality !== "All") query.quality = quality;
 
-    let products = await Product.find(query).sort({ createdAt: -1 }).lean();
-
-    // Auto-seed if database empty
-    if (products.length === 0 && !search && brand === "All" && category === "All") {
-      const seeded = await Product.insertMany(
-        INITIAL_PRODUCTS.map((p) => {
-          const { id, ...rest } = p;
-          return rest;
-        })
-      );
-      products = seeded.map((s) => s.toObject());
-    }
+    const products = await Product.find(query).sort({ createdAt: -1 }).lean();
 
     const formatted = products.map((p: any) => ({
       ...p,

@@ -8,6 +8,7 @@ export interface IUserDocument extends Document {
   password: string;
   role: UserRole;
   assignedLocation: string;
+  supervisedLocations?: string[];
   phone?: string;
   status: "Active" | "Inactive";
   createdAt: Date;
@@ -29,6 +30,10 @@ const UserSchema = new Schema<IUserDocument>(
       type: String,
       default: "Main Hub - Lagos",
       required: true,
+    },
+    supervisedLocations: {
+      type: [String],
+      default: [],
     },
     phone: { type: String, default: "" },
     status: {

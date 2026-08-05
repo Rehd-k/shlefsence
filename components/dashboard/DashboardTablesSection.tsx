@@ -14,6 +14,7 @@ import {
   Search,
 } from "lucide-react";
 import { clsx } from "clsx";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 
 interface DashboardTablesSectionProps {
   orders: LatestOrder[];
@@ -105,7 +106,7 @@ export const DashboardTablesSection: React.FC<DashboardTablesSectionProps> = ({
                 <th className="px-4 py-3">Customer</th>
                 <th className="px-4 py-3">Segment</th>
                 <th className="px-4 py-3">Items</th>
-                <th className="px-4 py-3 text-right">Total (₦)</th>
+                <th className="px-4 py-3 text-right">Total</th>
                 <th className="px-4 py-3">Payment</th>
                 <th className="px-4 py-3">Fulfillment Status</th>
                 <th className="px-4 py-3 text-right">Actions</th>
@@ -129,7 +130,7 @@ export const DashboardTablesSection: React.FC<DashboardTablesSectionProps> = ({
                     {ord.itemsCount} pcs
                   </td>
                   <td className="px-4 py-3 text-right font-extrabold text-slate-900 dark:text-white font-mono">
-                    ₦{ord.totalAmount.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                    {formatCurrency(ord.totalAmount)}
                   </td>
                   <td className="px-4 py-3">
                     <Badge
@@ -251,7 +252,7 @@ export const DashboardTablesSection: React.FC<DashboardTablesSectionProps> = ({
                 <th className="px-4 py-3">Customer</th>
                 <th className="px-4 py-3">Invoice Ref</th>
                 <th className="px-4 py-3">Method</th>
-                <th className="px-4 py-3 text-right">Amount (₦)</th>
+                <th className="px-4 py-3 text-right">Amount</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Date</th>
               </tr>
@@ -274,7 +275,7 @@ export const DashboardTablesSection: React.FC<DashboardTablesSectionProps> = ({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-                    +₦{pay.amount.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                    +{formatCurrency(pay.amount)}
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant={pay.status === "Completed" ? "success" : "warning"} size="sm">

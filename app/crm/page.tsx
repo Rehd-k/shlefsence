@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useLocation } from "@/lib/context/LocationContext";
 import {
   Users,
   Building2,
@@ -39,9 +40,11 @@ export default function CustomerCRMPage() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [newCustomerModalOpen, setNewCustomerModalOpen] = useState(false);
 
+  const { activeLocation } = useLocation();
+
   useEffect(() => {
     fetchCustomers();
-  }, [selectedType, sortBy]);
+  }, [selectedType, sortBy, activeLocation]);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -50,6 +53,9 @@ export default function CustomerCRMPage() {
       if (searchQuery) params.append("search", searchQuery);
       if (selectedType && selectedType !== "All") params.append("customerType", selectedType);
       if (sortBy) params.append("sortBy", sortBy);
+      if (activeLocation && activeLocation !== "All Locations" && activeLocation !== "All Warehouses") {
+        params.append("warehouse", activeLocation);
+      }
 
       const res = await fetch(`/api/crm/customers?${params.toString()}`);
       const json = await res.json();

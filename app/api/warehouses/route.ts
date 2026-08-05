@@ -1,24 +1,20 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import Warehouse from "@/lib/models/Warehouse";
+import User from "@/lib/models/User";
 
 const INITIAL_WAREHOUSES = [
-  { name: "Main Hub - New York", address: "142 Logistics Way, Queens NY", skusCount: 1420, capacity: "84% Full", manager: "Alex Rivers" },
-  { name: "West Coast Depot - LA", address: "880 Port Commerce Blvd, Long Beach CA", skusCount: 890, capacity: "62% Full", manager: "Sarah Jenkins" },
-  { name: "Central Hub - Texas", address: "304 Cargo Pkwy, Dallas TX", skusCount: 610, capacity: "48% Full", manager: "Marcus Vance" },
-  { name: "EU Logistics - Rotterdam", address: "Port Haven 12, Rotterdam Netherlands", skusCount: 420, capacity: "35% Full", manager: "Dirk Bakker" },
+  { name: "Main Hub - Lagos", address: "142 Logistics Way, Ikeja, Lagos", skusCount: 1420, capacity: "84% Full", manager: "Lagos Supervisor" },
+  { name: "Ikeja Shop Counter", address: "15 Otigba Street, Computer Village, Ikeja", skusCount: 890, capacity: "62% Full", manager: "Lagos Supervisor" },
+  { name: "Abuja Central Hub", address: "304 Cargo Pkwy, Abuja", skusCount: 610, capacity: "48% Full", manager: "Lagos Supervisor" },
+  { name: "Port Harcourt Depot", address: "Port Haven 12, Port Harcourt", skusCount: 420, capacity: "35% Full", manager: "Lagos Supervisor" },
 ];
 
 export async function GET() {
   try {
     await connectToDatabase();
 
-    let warehouses = await Warehouse.find({}).sort({ createdAt: -1 }).lean();
-
-    if (warehouses.length === 0) {
-      const seeded = await Warehouse.insertMany(INITIAL_WAREHOUSES);
-      warehouses = seeded.map((s) => s.toObject());
-    }
+    const warehouses = await Warehouse.find({}).sort({ createdAt: -1 }).lean();
 
     const formatted = warehouses.map((wh: any) => ({
       ...wh,
@@ -37,6 +33,21 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const newWarehouse = await Warehouse.create(body);
+    
+    // Find selected supervisor User and associate this warehouse with them
+    if (body.manager) {
+      const supervisor = await User.findOne({ name: body.manager, role: "Supervisor" });
+      if (supervisor) {
+        if (!supervisor.supervisedLocations) {
+          supervisor.supervisedLocations = [];
+        }
+        if (!supervisor.supervisedLocations.includes(body.name)) {
+          supervisor.supervisedLocations.push(body.name);
+          await supervisor.save();
+        }
+      }
+    }
+
     const obj = newWarehouse.toObject();
 
     return NextResponse.json({

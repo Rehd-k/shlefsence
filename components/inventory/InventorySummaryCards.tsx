@@ -12,6 +12,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { InventorySummary } from "@/lib/types/inventory";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 
 export interface InventorySummaryCardsProps {
   summary: InventorySummary;
@@ -40,14 +41,13 @@ export const InventorySummaryCards: React.FC<InventorySummaryCardsProps> = ({
     {
       id: "inventoryValue",
       title: "Inventory Value",
-      value: `$${summary.inventoryValue.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      subtitle: `Cost Basis: $${summary.inventoryValue.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+      value: formatCurrency(summary.inventoryValue.totalValue),
+      subtitle: `Cost Basis: ${formatCurrency(summary.inventoryValue.totalCost)}`,
       icon: CircleDollarSign,
       iconBg: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400",
       badge: (
         <Badge variant="purple" size="sm">
-          Prof. Margin: +$
-          {summary.inventoryValue.potentialProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          Prof. Margin: +{formatCurrency(summary.inventoryValue.potentialProfit)}
         </Badge>
       ),
       clickableStatus: null,
@@ -70,7 +70,7 @@ export const InventorySummaryCards: React.FC<InventorySummaryCardsProps> = ({
       id: "deadStock",
       title: "Dead Stock (>90d)",
       value: `${summary.deadStock.count} SKUs`,
-      subtitle: `$${summary.deadStock.tiedCapital.toLocaleString()} tied capital`,
+      subtitle: `${formatCurrency(summary.deadStock.tiedCapital)} tied capital`,
       icon: Clock,
       iconBg: "bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400",
       badge: (

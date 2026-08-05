@@ -10,6 +10,7 @@ export interface IPaymentDocument extends Document {
   method: PaymentMethod;
   status: "Completed" | "Pending Clearing" | "Processing" | "Failed";
   date: string;
+  warehouse?: string;
   notes?: string;
   receivedBy?: string;
   createdAt: Date;
@@ -24,6 +25,7 @@ const PaymentSchema = new Schema<IPaymentDocument>(
     customerName: { type: String, required: true, index: true },
     amount: { type: Number, required: true },
     method: { type: String, required: true },
+    warehouse: { type: String, index: true },
     status: {
       type: String,
       required: true,

@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useLocation } from "@/lib/context/LocationContext";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { DashboardMetricsGrid } from "@/components/dashboard/DashboardMetricsGrid";
 import { QuickActionToolbar } from "@/components/dashboard/QuickActionToolbar";
 import { DashboardChartsSection } from "@/components/dashboard/DashboardChartsSection";
@@ -42,7 +44,7 @@ export default function ERPDashboardPage() {
 
   // Filters
   const [timeRange, setTimeRange] = useState<"today" | "7d" | "30d" | "quarter">("30d");
-  const [activeWarehouse, setActiveWarehouse] = useState("Main Hub - New York");
+  const { activeLocation } = useLocation();
 
   // Quick Action Modal states
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
@@ -102,7 +104,7 @@ export default function ERPDashboardPage() {
         countToday: prev.recentSales.countToday + 1,
       },
     }));
-    triggerToast(`Sales Order ${newSale.orderNumber} issued successfully ($${newSale.totalAmount.toFixed(2)})`);
+    triggerToast(`Sales Order ${newSale.orderNumber} issued successfully (${formatCurrency(newSale.totalAmount)})`);
   };
 
   const handleProductAdded = (prod: any) => {
@@ -118,7 +120,7 @@ export default function ERPDashboardPage() {
         totalValue: prev.pendingPOs.totalValue + po.totalValue,
       },
     }));
-    triggerToast(`Purchase Order ${po.poNumber} sent to ${po.supplier} ($${po.totalValue.toFixed(2)})`);
+    triggerToast(`Purchase Order ${po.poNumber} sent to ${po.supplier} (${formatCurrency(po.totalValue)})`);
   };
 
   const handleTransferCompleted = (transfer: any) => {
@@ -151,8 +153,6 @@ export default function ERPDashboardPage() {
 
   return (
     <AppLayout
-      activeWarehouse={activeWarehouse}
-      onWarehouseChange={(wh) => setActiveWarehouse(wh)}
       onQuickAction={handleLayoutQuickAction}
     >
       {/* Toast Confirmation Overlay */}
@@ -189,11 +189,10 @@ export default function ERPDashboardPage() {
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition uppercase cursor-pointer ${
-                  timeRange === range
+                className={`px-3 py-1 text-xs font-bold rounded-lg transition uppercase cursor-pointer ${timeRange === range
                     ? "bg-indigo-600 text-white shadow-xs"
                     : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                }`}
+                  }`}
               >
                 {range}
               </button>

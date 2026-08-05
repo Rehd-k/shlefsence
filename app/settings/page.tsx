@@ -5,6 +5,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { useSettings } from "@/lib/context/SettingsContext";
+import { useAuth } from "@/lib/context/AuthContext";
+import { useLocation } from "@/lib/context/LocationContext";
 import {
   Settings,
   Save,
@@ -19,6 +21,12 @@ import {
   UserCheck,
   Store,
   Building2,
+  Users,
+  Plus,
+  Trash2,
+  Edit2,
+  Key,
+  X,
 } from "lucide-react";
 
 interface RolePermissionData {
@@ -176,10 +184,172 @@ export default function SettingsPage() {
     }
   };
 
+  const { user: currentUser } = useAuth();
+  const { availableLocations } = useLocation();
+
+  // User Management State
+  const [users, setUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
+  // Form states for add/edit user
+  const [uName, setUName] = useState("");
+  const [uEmail, setUEmail] = useState("");
+  const [uPassword, setUPassword] = useState("");
+  const [uRole, setURole] = useState<"Admin" | "Manager" | "Supervisor" | "Sales">("Sales");
+  const [uAssignedLocation, setUAssignedLocation] = useState("Main Hub - Lagos");
+  const [uSupervisedLocations, setUSupervisedLocations] = useState<string[]>([]);
+  const [uPhone, setUPhone] = useState("");
+  const [uStatus, setUStatus] = useState<"Active" | "Inactive">("Active");
+
+  useEffect(() => {
+    if (activeTab === "users" && currentUser?.role === "Admin") {
+      fetchUsers();
+    }
+  }, [activeTab]);
+
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const res = await fetch("/api/users");
+      const json = await res.json();
+      if (json.success && json.data) {
+        setUsers(json.data);
+      } else {
+        triggerToast(json.error || "Failed to load users", "error");
+      }
+    } catch (err: any) {
+      triggerToast(err.message || "Error loading users", "error");
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleAddUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uName || !uEmail || !uPassword) {
+      triggerToast("Name, Email, and Password are required", "error");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: uName,
+          email: uEmail,
+          password: uPassword,
+          role: uRole,
+          assignedLocation: uAssignedLocation,
+          supervisedLocations: uRole === "Supervisor" ? uSupervisedLocations : [],
+          phone: uPhone,
+          status: uStatus,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        triggerToast("User successfully created!");
+        setShowAddModal(false);
+        // Reset form
+        setUName("");
+        setUEmail("");
+        setUPassword("");
+        setURole("Sales");
+        setUAssignedLocation("Main Hub - Lagos");
+        setUSupervisedLocations([]);
+        setUPhone("");
+        setUStatus("Active");
+        fetchUsers();
+      } else {
+        triggerToast(json.error || "Failed to create user", "error");
+      }
+    } catch (err: any) {
+      triggerToast(err.message || "Error creating user", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedUser.id,
+          name: uName,
+          email: uEmail,
+          password: uPassword || undefined, // Only send if set
+          role: uRole,
+          assignedLocation: uAssignedLocation,
+          supervisedLocations: uRole === "Supervisor" ? uSupervisedLocations : [],
+          phone: uPhone,
+          status: uStatus,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        triggerToast("User updated successfully!");
+        setShowEditModal(false);
+        setSelectedUser(null);
+        fetchUsers();
+      } else {
+        triggerToast(json.error || "Failed to update user", "error");
+      }
+    } catch (err: any) {
+      triggerToast(err.message || "Error updating user", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/users?id=${userId}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        triggerToast("User deleted successfully.");
+        fetchUsers();
+      } else {
+        triggerToast(json.error || "Failed to delete user", "error");
+      }
+    } catch (err: any) {
+      triggerToast(err.message || "Error deleting user", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openEditModal = (user: any) => {
+    setSelectedUser(user);
+    setUName(user.name || "");
+    setUEmail(user.email || "");
+    setUPassword(""); // Empty for security / no change
+    setURole(user.role || "Sales");
+    setUAssignedLocation(user.assignedLocation || "Main Hub - Lagos");
+    setUSupervisedLocations(user.supervisedLocations || []);
+    setUPhone(user.phone || "");
+    setUStatus(user.status || "Active");
+    setShowEditModal(true);
+  };
+
   const tabs = [
     { id: "general", label: "General Settings", icon: <Settings className="w-4 h-4" /> },
     { id: "access-control", label: "Access Control & RBAC", icon: <Shield className="w-4 h-4" /> },
   ];
+  if (currentUser?.role === "Admin") {
+    tabs.push({ id: "users", label: "User Management", icon: <Users className="w-4 h-4" /> });
+  }
 
   const activeRoleData = permissions[selectedRole] || { role: selectedRole, allowedPages: [], allowAllLocations: false };
 
@@ -479,7 +649,448 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+
+        {activeTab === "users" && currentUser?.role === "Admin" && (
+          <div className="space-y-6">
+            {/* Header / Add User action bar */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Users className="w-4 h-4 text-indigo-500" /> Active System Staff Users
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Manage registered staff user accounts, assign locations, reset passwords, and control status.
+                </p>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setUName("");
+                  setUEmail("");
+                  setUPassword("");
+                  setURole("Sales");
+                  setUAssignedLocation("Main Hub - Lagos");
+                  setUSupervisedLocations([]);
+                  setUPhone("");
+                  setUStatus("Active");
+                  setShowAddModal(true);
+                }}
+                icon={<Plus className="w-4 h-4" />}
+              >
+                Add Staff User
+              </Button>
+            </div>
+
+            {/* Users List Table */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+              {loadingUsers ? (
+                <div className="py-12 flex flex-col items-center justify-center space-y-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-600 animate-spin text-white flex items-center justify-center">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs text-slate-400">Loading users...</span>
+                </div>
+              ) : users.length === 0 ? (
+                <div className="py-12 text-center text-xs text-slate-400">
+                  No staff users found. Run database seeder or create one above.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-800/40 text-slate-400 border-b border-slate-200/80 dark:border-slate-800 uppercase tracking-wider font-bold">
+                        <th className="px-6 py-4">Name & Email</th>
+                        <th className="px-6 py-4">Role</th>
+                        <th className="px-6 py-4">Assigned Warehouse</th>
+                        <th className="px-6 py-4">Phone</th>
+                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                      {users.map((u) => (
+                        <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-700 dark:text-slate-200 uppercase">
+                                {u.name ? u.name[0] : "U"}
+                              </div>
+                              <div>
+                                <p className="font-bold text-slate-900 dark:text-white">{u.name}</p>
+                                <p className="text-slate-400 font-medium text-[11px]">{u.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              u.role === "Admin" ? "bg-rose-500/10 text-rose-500 border-rose-500/20" :
+                              u.role === "Manager" ? "bg-purple-500/10 text-purple-500 border-purple-500/20" :
+                              u.role === "Supervisor" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                              "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                            }`}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 font-semibold text-slate-750 dark:text-slate-300">
+                            {u.assignedLocation}
+                            {u.role === "Supervisor" && u.supervisedLocations?.length > 0 && (
+                              <div className="text-[10px] text-slate-400 font-normal mt-0.5 max-w-[200px] truncate" title={u.supervisedLocations.join(", ")}>
+                                Supervises: {u.supervisedLocations.join(", ")}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-slate-400 font-medium">{u.phone || "—"}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              u.status === "Active" ? "bg-emerald-500/10 text-emerald-500" : "bg-slate-500/10 text-slate-405"
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${u.status === "Active" ? "bg-emerald-500" : "bg-slate-400"}`} />
+                              {u.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => openEditModal(u)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                title="Edit User"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(u.id)}
+                                disabled={u.id === currentUser?.id}
+                                className={`p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer ${
+                                  u.id === currentUser?.id ? "opacity-30 cursor-not-allowed" : ""
+                                }`}
+                                title={u.id === currentUser?.id ? "Cannot delete yourself" : "Delete User"}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* ADD USER MODAL */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 transition-all">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Plus className="w-4 h-4 text-indigo-500" /> Create Staff Account
+              </h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddUserSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={uName}
+                  onChange={(e) => setUName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-800 dark:text-slate-200 focus:outline-none"
+                  placeholder="e.g. Chukwuemeka Obi"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={uEmail}
+                  onChange={(e) => setUEmail(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-800 dark:text-slate-200 focus:outline-none"
+                  placeholder="e.g. name@shelfsense.ng"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  value={uPassword}
+                  onChange={(e) => setUPassword(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-800 dark:text-slate-200 focus:outline-none"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Role</label>
+                  <select
+                    value={uRole}
+                    onChange={(e) => setURole(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-850 dark:text-slate-200 focus:outline-none"
+                  >
+                    <option value="Admin">Admin</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Supervisor">Supervisor</option>
+                    <option value="Sales">Sales Staff</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Assigned Location</label>
+                  <select
+                    value={uAssignedLocation}
+                    onChange={(e) => setUAssignedLocation(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-850 dark:text-slate-200 focus:outline-none"
+                  >
+                    <option value="All Locations">All Locations</option>
+                    {availableLocations.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {uRole === "Supervisor" && (
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Supervised Warehouses</label>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl max-h-32 overflow-y-auto space-y-1.5">
+                    {availableLocations.map((loc) => {
+                      const isChecked = uSupervisedLocations.includes(loc);
+                      return (
+                        <label key={loc} className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setUSupervisedLocations(uSupervisedLocations.filter((l) => l !== loc));
+                              } else {
+                                setUSupervisedLocations([...uSupervisedLocations, loc]);
+                              }
+                            }}
+                            className="w-3.5 h-3.5 accent-indigo-650 rounded cursor-pointer"
+                          />
+                          <span>{loc}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    value={uPhone}
+                    onChange={(e) => setUPhone(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-850 dark:text-slate-200 focus:outline-none"
+                    placeholder="e.g. +234..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Status</label>
+                  <select
+                    value={uStatus}
+                    onChange={(e) => setUStatus(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-850 dark:text-slate-200 focus:outline-none"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-3">
+                <Button variant="outline" size="sm" onClick={() => setShowAddModal(false)} type="button">
+                  Cancel
+                </Button>
+                <Button variant="primary" size="sm" type="submit" isLoading={loading}>
+                  Save Staff User
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT USER MODAL */}
+      {showEditModal && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 transition-all">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Edit2 className="w-4 h-4 text-indigo-500" /> Edit Staff Account
+              </h3>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedUser(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-250 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditUserSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={uName}
+                  onChange={(e) => setUName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-800 dark:text-slate-200 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={uEmail}
+                  onChange={(e) => setUEmail(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-800 dark:text-slate-200 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1 flex items-center gap-1">
+                  Reset Password <span className="text-slate-450 font-normal">(Leave blank to keep current)</span>
+                </label>
+                <input
+                  type="password"
+                  value={uPassword}
+                  onChange={(e) => setUPassword(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-800 dark:text-slate-200 focus:outline-none"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Role</label>
+                  <select
+                    value={uRole}
+                    onChange={(e) => setURole(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-855 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-850 dark:text-slate-200 focus:outline-none"
+                  >
+                    <option value="Admin">Admin</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Supervisor">Supervisor</option>
+                    <option value="Sales">Sales Staff</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Assigned Location</label>
+                  <select
+                    value={uAssignedLocation}
+                    onChange={(e) => setUAssignedLocation(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-855 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-850 dark:text-slate-200 focus:outline-none"
+                  >
+                    <option value="All Locations">All Locations</option>
+                    {availableLocations.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {uRole === "Supervisor" && (
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Supervised Warehouses</label>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl max-h-32 overflow-y-auto space-y-1.5">
+                    {availableLocations.map((loc) => {
+                      const isChecked = uSupervisedLocations.includes(loc);
+                      return (
+                        <label key={loc} className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setUSupervisedLocations(uSupervisedLocations.filter((l) => l !== loc));
+                              } else {
+                                setUSupervisedLocations([...uSupervisedLocations, loc]);
+                              }
+                            }}
+                            className="w-3.5 h-3.5 accent-indigo-650 rounded cursor-pointer"
+                          />
+                          <span>{loc}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    value={uPhone}
+                    onChange={(e) => setUPhone(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-850 dark:text-slate-200 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Status</label>
+                  <select
+                    value={uStatus}
+                    onChange={(e) => setUStatus(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-855 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-850 dark:text-slate-200 focus:outline-none"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setSelectedUser(null);
+                  }}
+                  type="button"
+                >
+                  Cancel
+                </Button>
+                <Button variant="primary" size="sm" type="submit" isLoading={loading}>
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }

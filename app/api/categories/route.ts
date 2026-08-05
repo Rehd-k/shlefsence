@@ -14,11 +14,7 @@ const DEFAULT_CATEGORIES = [
 export async function GET() {
   try {
     await connectToDatabase();
-    let categories = await Category.find({}).sort({ name: 1 });
-
-    if (categories.length === 0) {
-      categories = await Category.insertMany(DEFAULT_CATEGORIES);
-    }
+    const categories = await Category.find({}).sort({ name: 1 });
 
     return NextResponse.json({ success: true, data: categories });
   } catch (error: any) {

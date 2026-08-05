@@ -18,21 +18,24 @@ import {
 } from "lucide-react";
 import { SalesDashboardMetrics } from "@/lib/types/sales";
 import { SalesChartsSection } from "./SalesChartsSection";
-import {
-  SEED_DAILY_SALES,
-  SEED_REVENUE_VS_COST,
-  SEED_PROFIT_MARGINS,
-  SEED_TOP_CUSTOMERS,
-} from "@/lib/seed/salesSeedData";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 
 interface SalesDashboardViewProps {
   metrics: SalesDashboardMetrics;
   onNavigateTab: (tab: any) => void;
+  dailySales: any[];
+  revenueVsCost: any[];
+  profitMargins: any[];
+  topCustomers: any[];
 }
 
 export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({
   metrics,
   onNavigateTab,
+  dailySales,
+  revenueVsCost,
+  profitMargins,
+  topCustomers,
 }) => {
   return (
     <div className="space-y-6">
@@ -48,7 +51,7 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight font-mono">
-              ${metrics.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {formatCurrency(metrics.totalRevenue)}
             </h2>
             <div className="flex items-center gap-1.5 mt-1 text-xs">
               <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5">
@@ -70,7 +73,7 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight font-mono">
-              ${metrics.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {formatCurrency(metrics.grossProfit)}
             </h2>
             <div className="flex items-center gap-2 mt-1 text-xs">
               <Badge variant="success" size="sm">
@@ -96,7 +99,7 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({
             </h2>
             <div className="flex items-center gap-2 mt-1 text-xs">
               <span className="text-slate-700 dark:text-slate-300 font-bold font-mono">
-                ${metrics.avgOrderValue.toFixed(2)} AOV
+                {formatCurrency(metrics.avgOrderValue)} AOV
               </span>
               <span className="text-slate-400 text-[11px]">• +{metrics.totalOrdersTrend}% vol</span>
             </div>
@@ -114,11 +117,11 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({
           </div>
           <div className="mt-2">
             <h2 className="text-2xl font-black text-amber-600 dark:text-amber-400 tracking-tight font-mono">
-              ${metrics.outstandingInvoicesTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {formatCurrency(metrics.outstandingInvoicesTotal)}
             </h2>
             <div className="flex items-center gap-1.5 mt-1 text-xs">
               <span className="text-rose-600 dark:text-rose-400 font-extrabold font-mono">
-                ${metrics.overdueAmount.toLocaleString()} Overdue
+                {formatCurrency(metrics.overdueAmount)} Overdue
               </span>
               <span className="text-slate-400 text-[11px]">• 4 Accounts</span>
             </div>
@@ -141,12 +144,12 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({
           </div>
 
           <div className="flex items-center gap-6 divide-x divide-slate-800 text-xs">
-            <div className="pl-4 first:pl-0">
+             <div className="pl-4 first:pl-0">
               <div className="flex items-center gap-1.5 text-slate-400 mb-0.5">
                 <Building2 className="w-3.5 h-3.5 text-indigo-400" /> Wholesale B2B
               </div>
               <span className="text-base font-extrabold text-white font-mono">
-                ${metrics.wholesaleRevenue.toLocaleString()}
+                {formatCurrency(metrics.wholesaleRevenue)}
               </span>
             </div>
 
@@ -155,7 +158,7 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({
                 <UserCheck className="w-3.5 h-3.5 text-emerald-400" /> Retail Repair
               </div>
               <span className="text-base font-extrabold text-white font-mono">
-                ${metrics.retailRevenue.toLocaleString()}
+                {formatCurrency(metrics.retailRevenue)}
               </span>
             </div>
 
@@ -164,7 +167,7 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({
                 <Zap className="w-3.5 h-3.5 text-amber-400" /> Counter POS
               </div>
               <span className="text-base font-extrabold text-white font-mono">
-                ${metrics.posRevenue.toLocaleString()}
+                {formatCurrency(metrics.posRevenue)}
               </span>
             </div>
           </div>
@@ -173,10 +176,10 @@ export const SalesDashboardView: React.FC<SalesDashboardViewProps> = ({
 
       {/* Embedded Charts Section */}
       <SalesChartsSection
-        dailySales={SEED_DAILY_SALES}
-        revenueVsCost={SEED_REVENUE_VS_COST}
-        profitMargins={SEED_PROFIT_MARGINS}
-        topCustomers={SEED_TOP_CUSTOMERS}
+        dailySales={dailySales}
+        revenueVsCost={revenueVsCost}
+        profitMargins={profitMargins}
+        topCustomers={topCustomers}
       />
     </div>
   );

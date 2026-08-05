@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "reset-db": "npx tsx scripts/reset-db.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

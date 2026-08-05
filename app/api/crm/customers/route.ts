@@ -11,8 +11,13 @@ export async function GET(req: Request) {
     const search = searchParams.get("search") || "";
     const customerType = searchParams.get("customerType") || "";
     const sortBy = searchParams.get("sortBy") || "newest";
+    const warehouse = searchParams.get("warehouse") || "";
 
     const query: any = {};
+
+    if (warehouse && warehouse !== "All Locations" && warehouse !== "All Warehouses") {
+      query.warehouse = warehouse;
+    }
 
     if (search) {
       query.$or = [
@@ -40,18 +45,7 @@ export async function GET(req: Request) {
       sortOptions = { businessName: 1 };
     }
 
-    let customers = await Customer.find(query).sort(sortOptions).lean();
-
-    // Auto-seed if DB is empty and no specific search filter is set
-    if (customers.length === 0 && !search && !customerType) {
-      const seeded = await Customer.insertMany(
-        INITIAL_CRM_CUSTOMERS.map((c) => {
-          const { id, ...rest } = c;
-          return rest;
-        })
-      );
-      customers = seeded.map((s) => s.toObject());
-    }
+    const customers = await Customer.find(query).sort(sortOptions).lean();
 
     const formatted = customers.map((c: any) => ({
       ...c,

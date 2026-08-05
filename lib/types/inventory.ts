@@ -1,6 +1,6 @@
 export type StockStatus = "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "DEAD_STOCK" | "OVERSTOCKED";
 
-export type QualityGrade = "OEM_ORIGINAL" | "SERVICE_PACK" | "REFURBISHED_A" | "PREMIUM_AFTERMARKET";
+export type QualityGrade = string;
 
 export type MovementType = "ADJUSTMENT" | "TRANSFER" | "RECEIPT" | "SALE" | "DAMAGE" | "INITIAL_IMPORT";
 

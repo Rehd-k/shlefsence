@@ -25,6 +25,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { TrendingUp, DollarSign, Award, ArrowUpRight, ShoppingBag, ShieldCheck } from "lucide-react";
+import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/formatCurrency";
 
 interface SalesChartsSectionProps {
   dailySales: DailySalesData[];
@@ -101,7 +102,7 @@ export const SalesChartsSection: React.FC<SalesChartsSectionProps> = ({
           {activeChartTab === "daily" && (
             <div>
               <div className="flex items-center justify-between text-xs font-medium text-slate-500 mb-2">
-                <span>Daily Revenue ($) vs Daily Target Line ($)</span>
+                <span>Daily Revenue vs Daily Target Line</span>
                 <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                   <TrendingUp className="w-3.5 h-3.5" /> +14.2% vs Target Avg
                 </span>
@@ -121,7 +122,7 @@ export const SalesChartsSection: React.FC<SalesChartsSectionProps> = ({
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} opacity={0.5} />
                     <XAxis dataKey="dayLabel" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                    <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
+                    <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v)} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "#0f172a",
@@ -131,12 +132,12 @@ export const SalesChartsSection: React.FC<SalesChartsSectionProps> = ({
                         fontSize: "12px",
                         boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
                       }}
-                      formatter={(value: any) => [`$${Number(value).toLocaleString()}`, undefined]}
+                      formatter={(value: any) => [formatCurrency(Number(value)), undefined]}
                     />
                     <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
                     <Bar dataKey="wholesaleSales" name="Wholesale B2B Revenue" fill="url(#wholesaleGrad)" radius={[4, 4, 0, 0]} stackId="a" />
                     <Bar dataKey="retailSales" name="Retail & POS Revenue" fill="url(#retailGrad)" radius={[4, 4, 0, 0]} stackId="a" />
-                    <Line type="monotone" dataKey="target" name="Daily Target ($12.5k)" stroke="#ef4444" strokeWidth={2} strokeDasharray="4 4" dot={false} />
+                    <Line type="monotone" dataKey="target" name={`Daily Target (${formatCurrencyCompact(12500)})`} stroke="#ef4444" strokeWidth={2} strokeDasharray="4 4" dot={false} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -148,7 +149,7 @@ export const SalesChartsSection: React.FC<SalesChartsSectionProps> = ({
             <div>
               <div className="flex items-center justify-between text-xs font-medium text-slate-500 mb-2">
                 <span>Monthly Gross Revenue vs Cost of Goods Sold (COGS)</span>
-                <span className="font-bold text-indigo-600 dark:text-indigo-400">$342,980 Total Revenue</span>
+                <span className="font-bold text-indigo-600 dark:text-indigo-400">{formatCurrency(revenueVsCost.reduce((sum, item) => sum + item.revenue, 0))} Total Revenue</span>
               </div>
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -165,7 +166,7 @@ export const SalesChartsSection: React.FC<SalesChartsSectionProps> = ({
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} opacity={0.5} />
                     <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                    <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
+                    <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v)} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "#0f172a",
@@ -174,11 +175,11 @@ export const SalesChartsSection: React.FC<SalesChartsSectionProps> = ({
                         color: "#fff",
                         fontSize: "12px",
                       }}
-                      formatter={(val: any) => [`$${Number(val).toLocaleString()}`, undefined]}
+                      formatter={(val: any) => [formatCurrency(Number(val)), undefined]}
                     />
                     <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
-                    <Area type="monotone" dataKey="revenue" name="Gross Revenue ($)" stroke="#4f46e5" strokeWidth={2.5} fill="url(#revGrad)" />
-                    <Area type="monotone" dataKey="cost" name="COGS Cost ($)" stroke="#f59e0b" strokeWidth={2} fill="url(#costGrad)" />
+                    <Area type="monotone" dataKey="revenue" name="Gross Revenue" stroke="#4f46e5" strokeWidth={2.5} fill="url(#revGrad)" />
+                    <Area type="monotone" dataKey="cost" name="COGS Cost" stroke="#f59e0b" strokeWidth={2} fill="url(#costGrad)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -189,15 +190,15 @@ export const SalesChartsSection: React.FC<SalesChartsSectionProps> = ({
           {activeChartTab === "profit" && (
             <div>
               <div className="flex items-center justify-between text-xs font-medium text-slate-500 mb-2">
-                <span>Monthly Gross Profit ($) and Net Margin % Trend</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">34.0% Avg Margin</span>
+                <span>Monthly Gross Profit and Net Margin % Trend</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{profitMargins.length > 0 ? Math.round(profitMargins.reduce((sum, item) => sum + item.netMarginPercentage, 0) / profitMargins.length) : 35}% Avg Margin</span>
               </div>
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={profitMargins} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} opacity={0.5} />
                     <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                    <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
+                    <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v)} />
                     <YAxis yAxisId="right" orientation="right" stroke="#10b981" fontSize={11} tickLine={false} tickFormatter={(v) => `${v}%`} />
                     <Tooltip
                       contentStyle={{
@@ -209,7 +210,7 @@ export const SalesChartsSection: React.FC<SalesChartsSectionProps> = ({
                       }}
                     />
                     <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
-                    <Bar yAxisId="left" dataKey="grossProfit" name="Gross Profit ($)" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="left" dataKey="grossProfit" name="Gross Profit" fill="#10b981" radius={[4, 4, 0, 0]} />
                     <Line yAxisId="right" type="monotone" dataKey="netMarginPercentage" name="Gross Margin %" stroke="#6366f1" strokeWidth={3} dot={{ r: 4 }} />
                   </ComposedChart>
                 </ResponsiveContainer>
@@ -266,10 +267,10 @@ export const SalesChartsSection: React.FC<SalesChartsSectionProps> = ({
 
                   <div className="text-right shrink-0">
                     <span className="text-xs font-extrabold text-slate-900 dark:text-white font-mono block">
-                      ${cust.totalSpent.toLocaleString()}
+                      {formatCurrency(cust.totalSpent)}
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">
-                      ~${Math.round(cust.avgOrderValue)}/ord
+                      ~{formatCurrency(cust.avgOrderValue)}/ord
                     </span>
                   </div>
                 </div>

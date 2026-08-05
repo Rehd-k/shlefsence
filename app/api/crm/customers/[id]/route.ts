@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/db/mongodb";
 import Customer from "@/lib/models/Customer";
 import Invoice from "@/lib/models/Invoice";
 import WarrantyClaim from "@/lib/models/WarrantyClaim";
+import StoreSettings from "@/lib/models/StoreSettings";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -70,6 +71,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
     }
 
+    let currencySymbol = "₦";
+    const settings = await StoreSettings.findOne({});
+    if (settings && settings.currencyDefault) {
+      currencySymbol = settings.currencyDefault;
+    }
+
     // Check if wallet, debt, or credit changed to generate timeline events
     const timelineAdditions = [];
 
@@ -82,7 +89,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         id: `tl-${Date.now()}-w`,
         type: "wallet" as const,
         title: adj > 0 ? "Wallet Funds Deposited" : "Wallet Balance Deducted",
-        description: `${adj > 0 ? "Added" : "Deducted"} $${Math.abs(adj).toFixed(
+        description: `${adj > 0 ? "Added" : "Deducted"} ${currencySymbol}${Math.abs(adj).toFixed(
           2
         )} to store credit wallet balance`,
         amount: Math.abs(adj),
@@ -100,7 +107,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         id: `tl-${Date.now()}-d`,
         type: "payment" as const,
         title: "Outstanding Debt Settled",
-        description: `Payment of $${settlement.toFixed(2)} applied to outstanding account balance`,
+        description: `Payment of ${currencySymbol}${settlement.toFixed(2)} applied to outstanding account balance`,
         amount: settlement,
         badge: "Debt Clearance",
         date: new Date().toISOString(),
@@ -116,7 +123,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         id: `tl-${Date.now()}-c`,
         type: "credit" as const,
         title: "Credit Limit Adjusted",
-        description: `Credit line limit changed from $${oldLimit.toFixed(2)} to $${newLimit.toFixed(
+        description: `Credit line limit changed from ${currencySymbol}${oldLimit.toFixed(2)} to ${currencySymbol}${newLimit.toFixed(
           2
         )}`,
         amount: newLimit,

@@ -60,7 +60,7 @@ export const SalesHeader: React.FC<SalesHeaderProps> = ({
       id: "outstanding",
       label: "Outstanding AR",
       icon: AlertCircle,
-      badge: outstandingCount > 0 ? `₦48.9M (${outstandingCount})` : undefined,
+      badge: outstandingCount > 0 ? `Active (${outstandingCount})` : undefined,
       badgeVariant: "warning",
     },
   ];

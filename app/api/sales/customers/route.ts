@@ -19,17 +19,7 @@ export async function GET(req: Request) {
       ];
     }
 
-    let customers = await WholesaleCustomer.find(query).sort({ createdAt: -1 }).lean();
-
-    if (customers.length === 0 && !search) {
-      const seeded = await WholesaleCustomer.insertMany(
-        SEED_WHOLESALE_CUSTOMERS.map((c) => {
-          const { id, ...rest } = c;
-          return rest;
-        })
-      );
-      customers = seeded.map((s) => s.toObject());
-    }
+    const customers = await WholesaleCustomer.find(query).sort({ createdAt: -1 }).lean();
 
     const formatted = customers.map((c: any) => ({
       ...c,

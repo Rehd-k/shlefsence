@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { IInventoryItem } from "@/lib/types/inventory";
-import { ArrowRight, Building2, MapPin } from "lucide-react";
-import { WAREHOUSE_OPTIONS } from "@/components/layout/AppLayout";
+import { ArrowRight } from "lucide-react";
 
 export interface MoveInventoryModalProps {
   isOpen: boolean;
@@ -26,9 +25,25 @@ export const MoveInventoryModal: React.FC<MoveInventoryModalProps> = ({
   selectedItems,
   onConfirmMove,
 }) => {
-  const [targetWarehouse, setTargetWarehouse] = useState<string>("West Coast Depot - LA");
+  const [targetWarehouse, setTargetWarehouse] = useState<string>("");
+  const [warehousesList, setWarehousesList] = useState<{ value: string; label: string }[]>([]);
   const [targetShelf, setTargetShelf] = useState<string>("B2-S1-B05");
   const [reason, setReason] = useState<string>("Inter-warehouse Stock Transfer");
+
+  useEffect(() => {
+    fetch("/api/warehouses")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          const opts = json.data.map((w: any) => ({ value: w.name, label: w.name }));
+          setWarehousesList(opts);
+          if (opts.length > 0) {
+            setTargetWarehouse(opts[0].value);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,8 +59,9 @@ export const MoveInventoryModal: React.FC<MoveInventoryModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Move Inventory (${selectedItems.length} items)`}
-      description="Transfer stock between warehouse hubs or relocate shelf & bin positions."
+      title="Relocate Stock or Transfer Branch"
+      description="Create a stock movement audit trail. This updates shelf balances instantly."
+      maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Current Origin Summary */}
@@ -69,10 +85,7 @@ export const MoveInventoryModal: React.FC<MoveInventoryModalProps> = ({
           label="Destination Warehouse Hub"
           value={targetWarehouse}
           onChange={(e) => setTargetWarehouse(e.target.value)}
-          options={WAREHOUSE_OPTIONS.filter((w) => w !== "All Warehouses").map((w) => ({
-            value: w,
-            label: w,
-          }))}
+          options={warehousesList}
         />
 
         <Input
@@ -88,19 +101,19 @@ export const MoveInventoryModal: React.FC<MoveInventoryModalProps> = ({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           options={[
-            { value: "Inter-warehouse Stock Transfer", label: "Inter-warehouse Stock Transfer" },
-            { value: "Regional Rebalance Fulfillment", label: "Regional Rebalance Fulfillment" },
-            { value: "Warehouse Bin Relocation", label: "Warehouse Bin Relocation" },
-            { value: "Overstock Redistribution", label: "Overstock Redistribution" },
+            { value: "Inter-warehouse Stock Transfer", label: "Inter-branch Transfer Route" },
+            { value: "Damaged Stock Relocation", label: "Relocation to Damaged Stock Zone" },
+            { value: "Putaway Correction", label: "Corrective Zone Re-binning" },
+            { value: "Temporary Display Count", label: "Counter Showroom Display" },
           ]}
         />
 
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
+        <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" variant="primary">
-            Confirm Inventory Move
+            Confirm Relocation
           </Button>
         </div>
       </form>

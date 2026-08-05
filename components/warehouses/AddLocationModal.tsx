@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
-import { Building2, MapPin, User, CheckCircle } from "lucide-react";
+import { Building2, MapPin, CheckCircle } from "lucide-react";
 
 interface AddLocationModalProps {
   isOpen: boolean;
@@ -23,7 +23,22 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
   const [type, setType] = useState<"Main Hub" | "Regional Depot" | "Retail Branch">("Retail Branch");
   const [address, setAddress] = useState("");
   const [manager, setManager] = useState("");
+  const [supervisors, setSupervisors] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/users/supervisors")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          setSupervisors(json.data);
+          if (json.data.length > 0) {
+            setManager(json.data[0].name);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +65,7 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
         setName("");
         setCode("");
         setAddress("");
-        setManager("");
+        setManager(supervisors.length > 0 ? supervisors[0].name : "");
         onClose();
       }
     } catch (err) {
@@ -107,12 +122,13 @@ export const AddLocationModal: React.FC<AddLocationModalProps> = ({
           icon={<MapPin className="w-4 h-4" />}
         />
 
-        <Input
+        <Select
           label="Manager / Lead Supervisor"
-          placeholder="e.g. Chukwuemeka Obi"
           value={manager}
           onChange={(e) => setManager(e.target.value)}
-          icon={<User className="w-4 h-4" />}
+          options={supervisors.map((s) => ({ value: s.name, label: `${s.name} (${s.email})` }))}
+          placeholder={supervisors.length === 0 ? "No active supervisors found" : "Select Supervisor"}
+          required
         />
 
         <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">

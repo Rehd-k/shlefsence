@@ -89,7 +89,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ receipts, on
 
         <Card className="p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Revenue (₦)</span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Revenue</span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center font-bold">
               <TrendingUp className="w-4 h-4" />
             </div>
@@ -195,7 +195,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ receipts, on
                 <th className="px-4 py-3">Location</th>
                 <th className="px-4 py-3">Payment</th>
                 <th className="px-4 py-3">Items Summary</th>
-                <th className="px-4 py-3 text-right">Amount (₦)</th>
+                <th className="px-4 py-3 text-right">Amount</th>
                 <th className="px-4 py-3 text-center">Action</th>
               </tr>
             </thead>

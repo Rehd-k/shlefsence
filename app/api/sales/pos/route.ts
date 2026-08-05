@@ -5,15 +5,19 @@ import Receipt from "@/lib/models/Receipt";
 import Invoice from "@/lib/models/Invoice";
 import { SEED_POS_CATALOG } from "@/lib/seed/salesSeedData";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await connectToDatabase();
 
-    const products = await Product.find({}).sort({ name: 1 }).lean();
+    const { searchParams } = new URL(req.url);
+    const warehouse = searchParams.get("warehouse") || "";
 
-    if (products.length === 0) {
-      return NextResponse.json({ success: true, data: SEED_POS_CATALOG });
+    const query: any = {};
+    if (warehouse && warehouse !== "All Locations" && warehouse !== "All Warehouses") {
+      query.warehouse = warehouse;
     }
+
+    const products = await Product.find(query).sort({ name: 1 }).lean();
 
     const posCatalog = products.map((p: any) => ({
       id: p._id.toString(),

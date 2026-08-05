@@ -36,6 +36,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const json = await res.json();
       if (json.success && json.data) {
         setSettings(json.data);
+        localStorage.setItem("shelfsense_settings", JSON.stringify(json.data));
       }
     } catch (err) {
       console.error("Error loading store settings:", err);
@@ -58,6 +59,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const json = await res.json();
       if (json.success && json.data) {
         setSettings(json.data);
+        localStorage.setItem("shelfsense_settings", JSON.stringify(json.data));
         return true;
       }
     } catch (err) {

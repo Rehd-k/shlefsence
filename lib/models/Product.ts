@@ -57,8 +57,8 @@ const ProductSchema = new Schema<IProductDocument>(
     quality: {
       type: String,
       required: true,
-      enum: ["OEM_ORIGINAL", "SERVICE_PACK", "REFURBISHED_A", "PREMIUM_AFTERMARKET"],
       default: "OEM_ORIGINAL",
+      index: true,
     },
     category: { type: String, required: true, index: true },
     supplier: { type: String, required: true, index: true },

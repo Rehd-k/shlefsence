@@ -31,9 +31,10 @@ import { CustomerSearchSelect, ICustomerInfo } from "./CustomerSearchSelect";
 
 interface POSViewProps {
   onCompletePOSSale: (receipt: IReceipt) => void;
+  activeLocation?: string;
 }
 
-export const POSView: React.FC<POSViewProps> = ({ onCompletePOSSale }) => {
+export const POSView: React.FC<POSViewProps> = ({ onCompletePOSSale, activeLocation }) => {
   const [catalog, setCatalog] = useState<IPOSCatalogItem[]>(SEED_POS_CATALOG);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
@@ -54,7 +55,11 @@ export const POSView: React.FC<POSViewProps> = ({ onCompletePOSSale }) => {
   const qualities = ["ALL", "OEM_ORIGINAL", "SERVICE_PACK", "PREMIUM_AFTERMARKET"];
 
   useEffect(() => {
-    fetch("/api/sales/pos")
+    const query = activeLocation && activeLocation !== "All Locations" && activeLocation !== "All Warehouses"
+      ? `?warehouse=${encodeURIComponent(activeLocation)}`
+      : "";
+
+    fetch(`/api/sales/pos${query}`)
       .then((res) => res.json())
       .then((json) => {
         if (json.success && json.data) {
@@ -71,7 +76,7 @@ export const POSView: React.FC<POSViewProps> = ({ onCompletePOSSale }) => {
         }
       })
       .catch((err) => console.error("Error loading POS customers:", err));
-  }, []);
+  }, [activeLocation]);
 
   const handleCustomerChange = (customer: ICustomerInfo | null) => {
     if (!customer) {

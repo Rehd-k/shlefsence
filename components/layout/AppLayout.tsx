@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/context/AuthContext";
+import { useLocation } from "@/lib/context/LocationContext";
 import {
   Package,
   Layers,
@@ -36,13 +37,7 @@ export interface AppLayoutProps {
   onQuickAction?: (actionKey: string) => void;
 }
 
-export const WAREHOUSE_OPTIONS = [
-  "All Warehouses",
-  "Main Hub - Lagos",
-  "Ikeja Shop Counter",
-  "Abuja Central Hub",
-  "Port Harcourt Depot",
-];
+// WAREHOUSE_OPTIONS constant removed in favor of dynamic context locations
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
   children,
@@ -53,30 +48,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, logout, hasPermission } = useAuth();
+  const { activeLocation, setActiveLocation, availableLocations } = useLocation();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [selectedWarehouse, setSelectedWarehouse] = useState(
-    user?.assignedLocation && user.assignedLocation !== "All Locations"
-      ? user.assignedLocation
-      : activeWarehouse
-  );
   const [warehouseDropdownOpen, setWarehouseDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  const canSwitchLocations = user?.role === "Admin" || (user?.permissions?.allowAllLocations ?? true);
-
-  // Lock warehouse selection if restricted
-  useEffect(() => {
-    if (user && !canSwitchLocations && user.assignedLocation) {
-      setSelectedWarehouse(user.assignedLocation);
-      if (onWarehouseChange) {
-        onWarehouseChange(user.assignedLocation);
-      }
-    }
-  }, [user, canSwitchLocations]);
+  // Switch permissions
+  const isSupervisorWithMultiple = user?.role === "Supervisor" && user.supervisedLocations && user.supervisedLocations.length > 1;
+  const canSwitchLocations = user?.role === "Admin" || user?.role === "Manager" || (user?.permissions?.allowAllLocations ?? true) || isSupervisorWithMultiple;
 
   // Route protection redirect
   useEffect(() => {
@@ -85,11 +68,23 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     }
   }, [user, loading, router]);
 
-  useEffect(() => {
-    if (user?.assignedLocation && user.assignedLocation !== "All Locations" && canSwitchLocations) {
-      setSelectedWarehouse(user.assignedLocation);
+  // Generate switch options depending on role and supervisor assignments
+  const getWarehouseOptions = () => {
+    if (user?.role === "Admin" || user?.role === "Manager" || (user?.permissions?.allowAllLocations ?? true)) {
+      return ["All Locations", ...availableLocations];
     }
-  }, [user, canSwitchLocations]);
+    if (user?.role === "Supervisor") {
+      const supervised = user.supervisedLocations || [];
+      if (supervised.length === 0) {
+        return [user.assignedLocation || "Main Hub - Lagos"];
+      }
+      return supervised;
+    }
+    // Sales staff locked to assigned location
+    return [user?.assignedLocation || "Main Hub - Lagos"];
+  };
+
+  const warehouseOptions = getWarehouseOptions();
 
   // Keyboard shortcut listener
   useEffect(() => {
@@ -119,7 +114,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   }, [onQuickAction]);
 
   const handleWarehouseSelect = (wh: string) => {
-    setSelectedWarehouse(wh);
+    setActiveLocation(wh);
     if (onWarehouseChange) onWarehouseChange(wh);
     setWarehouseDropdownOpen(false);
   };
@@ -284,7 +279,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-400 leading-normal truncate">
-              {user?.assignedLocation || "Main Hub - Lagos"}
+              {activeLocation || user?.assignedLocation || "Main Hub - Lagos"}
             </p>
           </div>
         )}
@@ -329,7 +324,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 )}
               >
                 <Warehouse className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span className="max-w-[160px] sm:max-w-[200px] truncate">{selectedWarehouse}</span>
+                <span className="max-w-[160px] sm:max-w-[200px] truncate">{activeLocation}</span>
                 {canSwitchLocations && <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
               </button>
 
@@ -338,20 +333,20 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                   <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     Switch Active Location
                   </div>
-                  {WAREHOUSE_OPTIONS.map((wh) => (
+                  {warehouseOptions.map((wh) => (
                     <button
                       key={wh}
                       type="button"
                       onClick={() => handleWarehouseSelect(wh)}
                       className={clsx(
                         "w-full text-left px-3 py-2 text-xs font-medium flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer",
-                        selectedWarehouse === wh
+                        activeLocation === wh
                           ? "text-indigo-600 font-bold bg-indigo-50/50 dark:bg-indigo-950/30 dark:text-indigo-400"
                           : "text-slate-700 dark:text-slate-300"
                       )}
                     >
                       <span>{wh}</span>
-                      {selectedWarehouse === wh && (
+                      {activeLocation === wh && (
                         <span className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400" />
                       )}
                     </button>

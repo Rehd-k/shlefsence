@@ -10,6 +10,7 @@ export interface UserSession {
   email: string;
   role: UserRole;
   assignedLocation: string;
+  supervisedLocations?: string[];
   permissions?: {
     allowedPages: string[];
     allowAllLocations: boolean;

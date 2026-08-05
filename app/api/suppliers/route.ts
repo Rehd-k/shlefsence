@@ -12,11 +12,6 @@ export async function GET(req: Request) {
     const status = searchParams.get("status") || "";
     const industry = searchParams.get("industry") || "";
 
-    let count = await Supplier.countDocuments();
-    if (count === 0) {
-      await Supplier.insertMany(INITIAL_SUPPLIERS_SEED);
-    }
-
     let query: any = {};
 
     if (search) {

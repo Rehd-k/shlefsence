@@ -24,6 +24,8 @@ import Customer from "@/lib/models/Customer";
 import RolePermission from "@/lib/models/RolePermission";
 import User from "@/lib/models/User";
 import StoreSettings from "@/lib/models/StoreSettings";
+import Brand from "@/lib/models/Brand";
+import QualityGrade from "@/lib/models/QualityGrade";
 
 import { INITIAL_INVENTORY_ITEMS, INITIAL_MOVEMENTS } from "@/lib/seed/inventorySeedData";
 import { INITIAL_PRODUCTS } from "@/lib/seed/productSeedData";
@@ -397,6 +399,34 @@ export async function POST(req: Request) {
         currencyDefault: "₦",
       });
       stats.storeSettings = 1;
+    }
+
+    // 17. Default Brands
+    if (force || (await Brand.countDocuments()) === 0) {
+      await Brand.deleteMany({});
+      const defaultBrands = [
+        { name: "Apple" },
+        { name: "Samsung" },
+        { name: "Google" },
+        { name: "Xiaomi" },
+        { name: "Infinix" },
+        { name: "Tecno" },
+      ];
+      await Brand.insertMany(defaultBrands);
+      stats.brands = defaultBrands.length;
+    }
+
+    // 18. Default Quality Grades
+    if (force || (await QualityGrade.countDocuments()) === 0) {
+      await QualityGrade.deleteMany({});
+      const defaultGrades = [
+        { name: "OEM_ORIGINAL", label: "OEM Original" },
+        { name: "SERVICE_PACK", label: "Service Pack" },
+        { name: "REFURBISHED_A", label: "Refurbished Grade A" },
+        { name: "PREMIUM_AFTERMARKET", label: "Premium Aftermarket" },
+      ];
+      await QualityGrade.insertMany(defaultGrades);
+      stats.qualityGrades = defaultGrades.length;
     }
 
     return NextResponse.json({

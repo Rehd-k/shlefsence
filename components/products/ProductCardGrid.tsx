@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { clsx } from "clsx";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 
 interface ProductCardGridProps {
   products: IProduct[];
@@ -107,19 +108,19 @@ export const ProductCardGrid: React.FC<ProductCardGridProps> = ({
               <div>
                 <span className="text-slate-400 block font-medium">Cost</span>
                 <span className="font-bold text-slate-700 dark:text-slate-300 font-mono">
-                  ₦{prod.purchasePrice.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                  {formatCurrency(prod.purchasePrice)}
                 </span>
               </div>
               <div>
                 <span className="text-slate-400 block font-medium">Wholesale</span>
                 <span className="font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">
-                  ₦{prod.wholesalePrice.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                  {formatCurrency(prod.wholesalePrice)}
                 </span>
               </div>
               <div>
                 <span className="text-slate-400 block font-medium">Retail</span>
                 <span className="font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-                  ₦{prod.sellingPrice.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                  {formatCurrency(prod.sellingPrice)}
                 </span>
               </div>
             </div>

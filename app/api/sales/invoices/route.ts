@@ -10,6 +10,9 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
+    const warehouse = searchParams.get("warehouse") || "";
+    const startDate = searchParams.get("startDate") || "";
+    const endDate = searchParams.get("endDate") || "";
 
     const query: any = {};
     if (search) {
@@ -20,18 +23,20 @@ export async function GET(req: Request) {
       ];
     }
     if (status && status !== "All") query.status = status;
-
-    let invoices = await Invoice.find(query).sort({ createdAt: -1 }).lean();
-
-    if (invoices.length === 0 && !search && (!status || status === "All")) {
-      const seeded = await Invoice.insertMany(
-        SEED_INVOICES.map((inv) => {
-          const { id, ...rest } = inv;
-          return rest;
-        })
-      );
-      invoices = seeded.map((s) => s.toObject());
+    if (warehouse && warehouse !== "All Locations" && warehouse !== "All Warehouses") {
+      query.warehouse = warehouse;
     }
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
+
+    const invoices = await Invoice.find(query).sort({ createdAt: -1 }).lean();
 
     const formatted = invoices.map((inv: any) => ({
       ...inv,

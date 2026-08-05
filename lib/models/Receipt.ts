@@ -14,6 +14,7 @@ export interface IReceiptDocument extends Document {
   itemsSummary: string;
   storeName: string;
   storeAddress: string;
+  warehouse?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +33,7 @@ const ReceiptSchema = new Schema<IReceiptDocument>(
     itemsSummary: { type: String, required: true },
     storeName: { type: String, required: true, default: "ShelfSense Main Store" },
     storeAddress: { type: String, required: true, default: "142 Logistics Way, Queens NY" },
+    warehouse: { type: String, index: true },
   },
   {
     timestamps: true,

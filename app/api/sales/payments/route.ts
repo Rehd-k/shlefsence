@@ -9,6 +9,9 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
+    const warehouse = searchParams.get("warehouse") || "";
+    const startDate = searchParams.get("startDate") || "";
+    const endDate = searchParams.get("endDate") || "";
 
     const query: any = {};
     if (search) {
@@ -18,18 +21,20 @@ export async function GET(req: Request) {
         { customerName: { $regex: search, $options: "i" } },
       ];
     }
-
-    let payments = await Payment.find(query).sort({ createdAt: -1 }).lean();
-
-    if (payments.length === 0 && !search) {
-      const seeded = await Payment.insertMany(
-        SEED_PAYMENTS.map((p) => {
-          const { id, ...rest } = p;
-          return rest;
-        })
-      );
-      payments = seeded.map((s) => s.toObject());
+    if (warehouse && warehouse !== "All Locations" && warehouse !== "All Warehouses") {
+      query.warehouse = warehouse;
     }
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
+
+    const payments = await Payment.find(query).sort({ createdAt: -1 }).lean();
 
     const formatted = payments.map((p: any) => ({
       ...p,

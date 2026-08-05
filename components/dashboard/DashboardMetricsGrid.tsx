@@ -21,6 +21,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { clsx } from "clsx";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 
 interface DashboardMetricsGridProps {
   metrics: DashboardHealthMetrics;
@@ -31,9 +32,6 @@ export const DashboardMetricsGrid: React.FC<DashboardMetricsGridProps> = ({
   metrics,
   onMetricClick,
 }) => {
-  const formatCurrency = (val: number) => {
-    return `₦${val.toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
-  };
 
   return (
     <div className="space-y-4">
@@ -326,7 +324,7 @@ export const DashboardMetricsGrid: React.FC<DashboardMetricsGridProps> = ({
               {metrics.recentSales.countToday}
             </span>
             <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
-              ${metrics.recentSales.avgOrderValue.toFixed(0)} avg
+              {formatCurrency(metrics.recentSales.avgOrderValue)} avg
             </span>
           </div>
         </div>
