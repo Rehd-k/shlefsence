@@ -18,7 +18,6 @@ import {
   InventoryFilterOptions,
   InventorySummary,
 } from "@/lib/types/inventory";
-import { INITIAL_INVENTORY_ITEMS } from "@/lib/seed/inventorySeedData";
 import {
   Package,
   Plus,
@@ -31,6 +30,7 @@ import {
 export default function InventoryPage() {
   const [items, setItems] = useState<IInventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { activeLocation } = useLocation();
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
 
@@ -65,6 +65,7 @@ export default function InventoryPage() {
   // Initial load
   const fetchInventory = async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const queryParams = new URLSearchParams();
       if (filters.search) queryParams.set("search", filters.search);
@@ -77,21 +78,19 @@ export default function InventoryPage() {
       if (filters.quality) queryParams.set("quality", filters.quality);
       if (filters.status) queryParams.set("status", filters.status);
 
-      const res = await fetch(`/api/inventory?${queryParams.toString()}`);
+      const res = await fetch(`/api/inventory?${queryParams.toString()}`, {
+        credentials: "include",
+      });
       const json = await res.json();
       if (json.success) {
         setItems(json.data);
       } else {
-        throw new Error("Local fallback required");
+        setItems([]);
+        setLoadError(json.error || "Failed to load inventory");
       }
     } catch (e) {
-      let loaded = INITIAL_INVENTORY_ITEMS.map((item, idx) => ({
-        ...item,
-        _id: `item-${idx + 1}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }));
-      setItems(loaded);
+      setItems([]);
+      setLoadError(e instanceof Error ? e.message : "Failed to load inventory");
     } finally {
       setIsLoading(false);
     }
@@ -144,32 +143,19 @@ export default function InventoryPage() {
     setIsDrawerOpen(true);
 
     try {
-      const res = await fetch(`/api/inventory/${item.sku}/movements`);
+      const res = await fetch(`/api/inventory/${item.sku}/movements`, {
+        credentials: "include",
+      });
       const json = await res.json();
       if (json.success) {
         setDrawerMovements(json.data);
       } else {
-        throw new Error("Movement fallback");
+        setDrawerMovements([]);
+        triggerToast(json.error || "Failed to load movement history");
       }
     } catch (e) {
-      const fallbackMovs: IInventoryMovement[] = [
-        {
-          _id: `m-${Date.now()}`,
-          inventoryItemId: item._id,
-          sku: item.sku,
-          productName: item.product,
-          type: "RECEIPT",
-          quantityChange: item.quantity,
-          previousQuantity: 0,
-          newQuantity: item.quantity,
-          toWarehouse: item.warehouse,
-          toShelf: item.shelf,
-          reason: "Warehouse PO Receiving Inspection",
-          performedBy: "Alex Rivers (Inventory Lead)",
-          createdAt: item.lastMovedAt || new Date().toISOString(),
-        },
-      ];
-      setDrawerMovements(fallbackMovs);
+      setDrawerMovements([]);
+      triggerToast(e instanceof Error ? e.message : "Failed to load movement history");
     }
   };
 
@@ -302,6 +288,12 @@ export default function InventoryPage() {
 
   return (
     <AppLayout>
+      {loadError && (
+        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+          {loadError}
+        </div>
+      )}
+
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5">
@@ -360,6 +352,10 @@ export default function InventoryPage() {
         filters={filters}
         onFilterChange={setFilters}
         onResetFilters={handleResetFilters}
+        availableBrands={[...new Set(items.map((i) => i.brand).filter(Boolean))]}
+        availableSuppliers={[...new Set(items.map((i) => i.supplier).filter(Boolean))]}
+        availableCategories={[...new Set(items.map((i) => i.category).filter(Boolean))]}
+        availableWarehouses={[...new Set(items.map((i) => i.warehouse).filter(Boolean))]}
       />
 
       {/* Large Searchable Inventory Table */}

@@ -145,7 +145,7 @@ export default function WarehousesPage() {
   const activeWarehouse = warehouses.find((w) => w.id === selectedWarehouseId) || hierarchyData?.warehouse;
 
   const handleScanResult = (code: string, type: "SKU" | "BIN" | "TRANSFER") => {
-    console.log("Scanned:", code, type);
+    // barcode scan handled by modal callbacks
   };
 
   const handleQuickAdjust = (bin: any) => {

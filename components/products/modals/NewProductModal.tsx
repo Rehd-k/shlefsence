@@ -253,7 +253,7 @@ export const NewProductModal: React.FC<NewProductModalProps> = ({
       salesHistory: [],
       warrantyLogs: [],
       images: [{ id: `img-${Date.now()}`, url: defaultImage, title: "Primary Photo", isPrimary: true }],
-      notes: [{ id: `n-${Date.now()}`, author: "Alex Rivers", role: "Inventory Lead", createdAt: new Date().toISOString(), content: "Initial catalog entry created." }],
+      notes: [{ id: `n-${Date.now()}`, author: "System", role: "Inventory Lead", createdAt: new Date().toISOString(), content: "Initial catalog entry created." }],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

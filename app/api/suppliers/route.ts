@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import Supplier from "@/lib/models/Supplier";
-import { INITIAL_SUPPLIERS_SEED } from "@/lib/seed/supplierSeedData";
-
 export async function GET(req: Request) {
   try {
     await connectToDatabase();
@@ -63,8 +61,8 @@ export async function GET(req: Request) {
       }
     });
 
-    const avgDeliveryTime = validDeliveryCount > 0 ? totalDeliveryDays / validDeliveryCount : 4.2;
-    const avgDefectiveRate = allSuppliers.length > 0 ? totalDefectRates / allSuppliers.length : 0.8;
+    const avgDeliveryTime = validDeliveryCount > 0 ? totalDeliveryDays / validDeliveryCount : 0;
+    const avgDefectiveRate = allSuppliers.length > 0 ? totalDefectRates / allSuppliers.length : 0;
 
     const formattedSuppliers = suppliers.map((sup: any) => ({
       ...sup,
@@ -92,7 +90,12 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     await connectToDatabase();
-    const body = await req.json();
+    const raw = await req.json();
+    const { parseBody } = await import("@/lib/validators/parse");
+    const { supplierCreateSchema } = await import("@/lib/validators/supplier");
+    const parsed = parseBody(supplierCreateSchema, raw);
+    if ("error" in parsed) return parsed.error;
+    const body = { ...parsed.data } as Record<string, unknown>;
 
     // Generate unique code if not provided
     if (!body.code) {

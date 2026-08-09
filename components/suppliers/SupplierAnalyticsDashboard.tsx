@@ -22,6 +22,9 @@ export const SupplierAnalyticsDashboard: React.FC<SupplierAnalyticsDashboardProp
     }).format(val);
 
   const totalSpend = suppliers.reduce((acc, s) => acc + (s.totalPurchasesValue || 0), 0) || 1;
+  const activeVendors = suppliers.filter(
+    (s) => (s as { status?: string }).status === "Active" || !(s as { status?: string }).status
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -40,7 +43,7 @@ export const SupplierAnalyticsDashboard: React.FC<SupplierAnalyticsDashboardProp
               </p>
             </div>
             <Badge variant="purple" size="sm">
-              6 Active Vendors
+              {activeVendors} Active Vendor{activeVendors === 1 ? "" : "s"}
             </Badge>
           </div>
 
@@ -67,7 +70,7 @@ export const SupplierAnalyticsDashboard: React.FC<SupplierAnalyticsDashboardProp
                   </div>
                   <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 rounded-full transition-all duration-500"
+                      className="h-full bg-linear-to-r from-indigo-500 via-indigo-600 to-purple-600 rounded-full transition-all duration-500"
                       style={{ width: `${Math.max(pct, 4)}%` }}
                     />
                   </div>

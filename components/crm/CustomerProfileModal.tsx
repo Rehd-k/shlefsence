@@ -193,7 +193,7 @@ export const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
           type: commType,
           subject: commSubject,
           content: commContent,
-          loggedBy: "Alex Rivers",
+          loggedBy: "System",
         }),
       });
 

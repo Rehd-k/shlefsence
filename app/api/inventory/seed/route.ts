@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
+import { assertSeedAuthorized } from "@/lib/auth/seedGuard";
 import InventoryItem from "@/lib/models/InventoryItem";
 import InventoryMovement from "@/lib/models/InventoryMovement";
 import { INITIAL_INVENTORY_ITEMS } from "@/lib/seed/inventorySeedData";
 
-export async function POST() {
+export async function POST(req: Request) {
+  const denied = assertSeedAuthorized(req);
+  if (denied) return denied;
+
   try {
     await connectToDatabase();
     await InventoryItem.deleteMany({});
@@ -12,7 +16,6 @@ export async function POST() {
 
     const createdItems = await InventoryItem.insertMany(INITIAL_INVENTORY_ITEMS);
 
-    // Create seed movement logs for each item
     const movementsToCreate = createdItems.map((item) => ({
       inventoryItemId: item._id,
       sku: item.sku,
@@ -24,7 +27,7 @@ export async function POST() {
       toWarehouse: item.warehouse,
       toShelf: item.shelf,
       reason: "Initial Warehouse Stock Intake PO-2026-001",
-      performedBy: "Alex Rivers (Inventory Mgr)",
+      performedBy: "System Seed",
     }));
 
     await InventoryMovement.insertMany(movementsToCreate);
@@ -33,7 +36,8 @@ export async function POST() {
       success: true,
       message: `Seeded ${createdItems.length} inventory items and movement history entries successfully.`,
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Seed failed";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

@@ -59,8 +59,9 @@ export async function GET() {
       let cost = 0;
       invoicesList.forEach((inv) => {
         (inv.items || []).forEach((item: any) => {
-          const itemCost = skuCostMap[item.sku] ?? (item.unitPrice * 0.65); // fallback to 65% cost
-          cost += itemCost * (item.quantity || 0);
+          const mappedCost = skuCostMap[item.sku];
+          if (mappedCost === undefined || mappedCost === null) return;
+          cost += mappedCost * (item.quantity || 0);
         });
       });
       return cost;
@@ -107,7 +108,10 @@ export async function GET() {
     const suppliers = await Supplier.find({}).lean();
     const outstandingPayables = suppliers.reduce((sum, s: any) => sum + (s.outstandingBalance || 0), 0);
     const suppliersWithBalance = suppliers.filter((s: any) => (s.outstandingBalance || 0) > 0);
-    const dueIn7DaysPayables = suppliersWithBalance.reduce((sum, s: any) => sum + ((s.outstandingBalance || 0) * 0.4), 0); // fallback 40%
+    const dueIn7DaysPayables = suppliersWithBalance.reduce((sum, s: any) => {
+      if (s.dueIn7Days != null) return sum + (s.dueIn7Days || 0);
+      return sum;
+    }, 0);
 
     // Low Stock Alerts
     const lowStockCount = inventoryItems.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= (item.reorderPoint || 10)).length;
@@ -333,7 +337,7 @@ export async function GET() {
         brand: data.brand,
         unitsSold: data.unitsSold,
         revenue: Number(data.revenue.toFixed(2)),
-        growthRate: 12.5,
+        growthRate: 0,
       };
     }).sort((a, b) => b.revenue - a.revenue).slice(0, 6);
 

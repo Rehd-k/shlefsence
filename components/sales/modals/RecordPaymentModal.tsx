@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { IInvoice, PaymentMethod, IPaymentRecord } from "@/lib/types/sales";
 import { CreditCard, DollarSign, CheckCircle2, Building2 } from "lucide-react";
 import { useSettings } from "@/lib/context/SettingsContext";
+import { useAuth } from "@/lib/context/AuthContext";
 
 interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const [paymentRef, setPaymentRef] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const { formatPrice } = useSettings();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (invoice) {
@@ -51,7 +53,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       status: "Completed",
       date: new Date().toISOString(),
       notes,
-      receivedBy: "Alex Rivers",
+      receivedBy: user?.name || "System",
     };
 
     onPaymentRecorded(newPayment, invoice.id);

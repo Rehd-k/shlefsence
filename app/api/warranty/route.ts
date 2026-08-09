@@ -2,12 +2,6 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import WarrantyClaim from "@/lib/models/WarrantyClaim";
 
-const INITIAL_WARRANTY_CLAIMS = [
-  { claimId: "RMA-401", customer: "Apex Mobile Repairs Inc", part: "iPhone 15 Pro Max OLED Assembly", issue: "Touch digitizer unresponsive on bottom right", status: "Pending Inspection", date: "2026-07-29" },
-  { claimId: "RMA-400", customer: "iFixFast Depot Brooklyn", part: "Galaxy S24 Ultra Battery Pack", issue: "Fails high-rate thermal cycle test", status: "Approved & Refunded", date: "2026-07-28" },
-  { claimId: "RMA-399", customer: "QuickFix Cellular Queens", part: "Pixel 8 Pro Charging Port Flex", issue: "Physical pin bending post install", status: "Rejected (Physical Damage)", date: "2026-07-26" },
-];
-
 export async function GET() {
   try {
     await connectToDatabase();

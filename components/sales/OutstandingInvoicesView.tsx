@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { IInvoice } from "@/lib/types/sales";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -17,7 +17,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { clsx } from "clsx";
-import { SEED_AR_AGEING } from "@/lib/seed/salesSeedData";
+import { computeArAgeing } from "@/lib/utils/arAgeing";
 
 interface OutstandingInvoicesViewProps {
   invoices: IInvoice[];
@@ -32,6 +32,11 @@ export const OutstandingInvoicesView: React.FC<OutstandingInvoicesViewProps> = (
   const [remindedInvoices, setRemindedInvoices] = useState<Record<string, boolean>>({});
 
   const unpaidInvoices = invoices.filter((inv) => inv.balanceDue > 0);
+  const arAgeing = useMemo(() => computeArAgeing(unpaidInvoices), [unpaidInvoices]);
+  const activeAccounts = useMemo(
+    () => new Set(unpaidInvoices.map((inv) => inv.customerName)).size,
+    [unpaidInvoices]
+  );
 
   const filtered = unpaidInvoices.filter(
     (inv) =>
@@ -53,7 +58,7 @@ export const OutstandingInvoicesView: React.FC<OutstandingInvoicesViewProps> = (
             Current (0-30 Days)
           </span>
           <h4 className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono mt-1">
-            ${SEED_AR_AGEING.current.toLocaleString()}
+            ${arAgeing.current.toLocaleString()}
           </h4>
           <span className="text-[10px] text-slate-400">Within terms</span>
         </Card>
@@ -64,7 +69,7 @@ export const OutstandingInvoicesView: React.FC<OutstandingInvoicesViewProps> = (
             31-60 Days Overdue
           </span>
           <h4 className="text-lg font-black text-amber-600 dark:text-amber-400 font-mono mt-1">
-            ${SEED_AR_AGEING.days31to60.toLocaleString()}
+            ${arAgeing.days31to60.toLocaleString()}
           </h4>
           <span className="text-[10px] text-amber-600/80 font-semibold">1st Reminder Sent</span>
         </Card>
@@ -75,7 +80,7 @@ export const OutstandingInvoicesView: React.FC<OutstandingInvoicesViewProps> = (
             61-90 Days Overdue
           </span>
           <h4 className="text-lg font-black text-orange-600 dark:text-orange-400 font-mono mt-1">
-            ${SEED_AR_AGEING.days61to90.toLocaleString()}
+            ${arAgeing.days61to90.toLocaleString()}
           </h4>
           <span className="text-[10px] text-orange-600 font-semibold">Credit Hold Risk</span>
         </Card>
@@ -86,7 +91,7 @@ export const OutstandingInvoicesView: React.FC<OutstandingInvoicesViewProps> = (
             90+ Days Overdue
           </span>
           <h4 className="text-lg font-black text-rose-600 dark:text-rose-400 font-mono mt-1">
-            ${SEED_AR_AGEING.overdue90Plus.toLocaleString()}
+            ${arAgeing.overdue90Plus.toLocaleString()}
           </h4>
           <span className="text-[10px] text-rose-600 font-semibold">Critical Collections</span>
         </Card>
@@ -97,9 +102,11 @@ export const OutstandingInvoicesView: React.FC<OutstandingInvoicesViewProps> = (
             Total Outstanding AR
           </span>
           <h4 className="text-lg font-black text-white font-mono mt-1">
-            ${SEED_AR_AGEING.totalOutstanding.toLocaleString()}
+            ${arAgeing.totalOutstanding.toLocaleString()}
           </h4>
-          <span className="text-[10px] text-slate-300 font-medium">4 Active Accounts</span>
+          <span className="text-[10px] text-slate-300 font-medium">
+            {activeAccounts} Active Account{activeAccounts === 1 ? "" : "s"}
+          </span>
         </Card>
       </div>
 

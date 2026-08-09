@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import InventoryItem from "@/lib/models/InventoryItem";
 import InventoryMovement from "@/lib/models/InventoryMovement";
-import { INITIAL_INVENTORY_ITEMS, INITIAL_MOVEMENTS } from "@/lib/seed/inventorySeedData";
 
 export async function GET(request: Request) {
   try {
@@ -58,7 +57,13 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     await connectToDatabase();
-    const newItem = await InventoryItem.create(body);
+    const { parseBody } = await import("@/lib/validators/parse");
+    const { inventoryCreateSchema } = await import("@/lib/validators/inventory");
+    const parsed = parseBody(inventoryCreateSchema, body);
+    if ("error" in parsed) return parsed.error;
+    const { getSessionFromRequest } = await import("@/lib/auth/session");
+    const session = await getSessionFromRequest(request);
+    const newItem = await InventoryItem.create(parsed.data);
 
     // Create movement entry for initial import
     await InventoryMovement.create({
@@ -72,7 +77,7 @@ export async function POST(request: Request) {
       toWarehouse: newItem.warehouse,
       toShelf: newItem.shelf,
       reason: "Initial item creation in ERP",
-      performedBy: "Alex Rivers",
+      performedBy: session?.name || "System",
     });
 
     return NextResponse.json({ success: true, data: newItem }, { status: 201 });

@@ -25,8 +25,8 @@ import {
   List,
 } from "lucide-react";
 import { clsx } from "clsx";
-import { SEED_POS_CATALOG } from "@/lib/seed/salesSeedData";
 import { useSettings } from "@/lib/context/SettingsContext";
+import { useAuth } from "@/lib/context/AuthContext";
 import { CustomerSearchSelect, ICustomerInfo } from "./CustomerSearchSelect";
 
 interface POSViewProps {
@@ -35,7 +35,10 @@ interface POSViewProps {
 }
 
 export const POSView: React.FC<POSViewProps> = ({ onCompletePOSSale, activeLocation }) => {
-  const [catalog, setCatalog] = useState<IPOSCatalogItem[]>(SEED_POS_CATALOG);
+  const [catalog, setCatalog] = useState<IPOSCatalogItem[]>([]);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [selectedQuality, setSelectedQuality] = useState("ALL");
@@ -59,16 +62,23 @@ export const POSView: React.FC<POSViewProps> = ({ onCompletePOSSale, activeLocat
       ? `?warehouse=${encodeURIComponent(activeLocation)}`
       : "";
 
-    fetch(`/api/sales/pos${query}`)
+    setCatalogError(null);
+    fetch(`/api/sales/pos${query}`, { credentials: "include" })
       .then((res) => res.json())
       .then((json) => {
         if (json.success && json.data) {
           setCatalog(json.data);
+        } else {
+          setCatalog([]);
+          setCatalogError(json.error || "Failed to load POS catalog");
         }
       })
-      .catch((err) => console.error("Error loading POS catalog:", err));
+      .catch((err) => {
+        setCatalog([]);
+        setCatalogError(err instanceof Error ? err.message : "Failed to load POS catalog");
+      });
 
-    fetch("/api/sales/customers")
+    fetch("/api/sales/customers", { credentials: "include" })
       .then((res) => res.json())
       .then((json) => {
         if (json.success && json.data) {
@@ -206,55 +216,46 @@ export const POSView: React.FC<POSViewProps> = ({ onCompletePOSSale, activeLocat
   const handleCheckout = async () => {
     if (cart.length === 0) return;
 
+    setCheckoutError(null);
     const payload = {
       customerName: activeCustomerObj ? activeCustomerObj.name : "Walk-in Retail Customer",
       customerType: activeCustomerObj ? "Wholesale" : "POS Quick Sale",
       items: cart,
       totalAmount: cartTotal,
       paymentMethod,
-      cashierName: "Alex Rivers",
+      cashierName: user?.name || "Cashier",
     };
 
     try {
       const res = await fetch("/api/sales/pos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
       const json = await res.json();
       if (json.success) {
         onCompletePOSSale(json.data);
+        setCart([]);
+        setCashTendered("");
+        setOrderNotes("");
       } else {
-        const fallbackReceipt: IReceipt = {
-          id: `REC-${Date.now().toString().slice(-4)}`,
-          receiptNumber: `REC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-          invoiceNumber: `INV-2026-${Math.floor(9400 + Math.random() * 500)}`,
-          customerName: activeCustomerObj ? activeCustomerObj.name : "Walk-in Retail Customer",
-          customerType: activeCustomerObj ? "Wholesale" : "POS Quick Sale",
-          itemsCount: cart.reduce((a, b) => a + b.quantity, 0),
-          totalAmount: cartTotal,
-          paymentMethod,
-          cashierName: "Alex Rivers",
-          timestamp: new Date().toISOString(),
-          itemsSummary: cart.map((i) => `${i.quantity}x ${i.product.name}`).join(", "),
-          storeName: "ShelfSense Hub NY Counter",
-          storeAddress: "350 5th Ave, Suite 1200, New York, NY 10118",
-        };
-        onCompletePOSSale(fallbackReceipt);
+        setCheckoutError(json.error || "Checkout failed");
       }
     } catch (err) {
-      console.error("POS API error:", err);
+      setCheckoutError(err instanceof Error ? err.message : "Checkout failed");
     }
-
-    setCart([]);
-    setCashTendered("");
-    setOrderNotes("");
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-140px)] min-h-[650px]">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-140px)] min-h-162.5">
       {/* LEFT PANE: PRODUCT CATALOG SEARCH & GRID (8 Cols) */}
       <div className="lg:col-span-7 xl:col-span-8 flex flex-col space-y-4 h-full min-h-0">
+        {(catalogError || checkoutError) && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+            {checkoutError || catalogError}
+          </div>
+        )}
         {/* Search & Barcode Scan Bar */}
         <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center gap-3">
           <form onSubmit={handleBarcodeSubmit} className="relative flex-1">
@@ -450,7 +451,7 @@ export const POSView: React.FC<POSViewProps> = ({ onCompletePOSSale, activeLocat
               <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2">
                 <ShoppingBag className="w-10 h-10 stroke-[1.5] text-slate-300 dark:text-slate-700" />
                 <p className="text-xs font-bold">Cart is empty</p>
-                <p className="text-[11px] text-slate-400 max-w-[200px]">
+                <p className="text-[11px] text-slate-400 max-w-50">
                   Click products on the left or scan barcode to add parts to cart.
                 </p>
               </div>
@@ -590,7 +591,7 @@ export const POSView: React.FC<POSViewProps> = ({ onCompletePOSSale, activeLocat
             disabled={cart.length === 0}
             icon={<CheckCircle2 className="w-5 h-5" />}
             onClick={handleCheckout}
-            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black py-3 rounded-xl shadow-lg shadow-emerald-600/20 text-sm tracking-wide"
+            className="w-full bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black py-3 rounded-xl shadow-lg shadow-emerald-600/20 text-sm tracking-wide"
           >
             Complete Sale & Issue Receipt ({formatPrice(cartTotal)})
           </Button>

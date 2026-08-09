@@ -20,15 +20,27 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://root:hJaJzbIv49UtuGLOqcLnerXCePc1wd6IG2wCsF6SLx9IZ5tFXvD2Xs264fpKAnk7@aeqbrsl90y35d145z9sw5cbq:27017/ijemoa?directConnection=true";
+const MONGODB_URI = process.env.MONGODB_URI;
+
+function mongoHostLabel(uri: string): string {
+  try {
+    const parsed = new URL(uri);
+    return `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+  } catch {
+    return "[invalid-uri]";
+  }
+}
 
 async function main() {
-  console.log("Connecting to MongoDB at:", MONGODB_URI);
+  if (!MONGODB_URI) {
+    throw new Error("MONGODB_URI is required. Set it in .env (see .env.example).");
+  }
+
+  console.log("Connecting to MongoDB at:", mongoHostLabel(MONGODB_URI));
   await mongoose.connect(MONGODB_URI);
   console.log("Connected to MongoDB successfully.");
 
-  // Drop the database
-  console.log("Dropping database 'shelfsense' to empty out all collections...");
+  console.log("Dropping database to empty out all collections...");
   if (mongoose.connection.db) {
     await mongoose.connection.db.dropDatabase();
     console.log("Database dropped successfully.");
@@ -36,7 +48,6 @@ async function main() {
     throw new Error("Could not access DB instance from Mongoose connection.");
   }
 
-  // Define Admin details
   const adminEmail = "admin@shelfsense.ng";
   const adminPassword = "Password123!";
 

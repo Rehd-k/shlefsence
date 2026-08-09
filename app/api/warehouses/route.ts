@@ -3,13 +3,6 @@ import { connectToDatabase } from "@/lib/db/mongodb";
 import Warehouse from "@/lib/models/Warehouse";
 import User from "@/lib/models/User";
 
-const INITIAL_WAREHOUSES = [
-  { name: "Main Hub - Lagos", address: "142 Logistics Way, Ikeja, Lagos", skusCount: 1420, capacity: "84% Full", manager: "Lagos Supervisor" },
-  { name: "Ikeja Shop Counter", address: "15 Otigba Street, Computer Village, Ikeja", skusCount: 890, capacity: "62% Full", manager: "Lagos Supervisor" },
-  { name: "Abuja Central Hub", address: "304 Cargo Pkwy, Abuja", skusCount: 610, capacity: "48% Full", manager: "Lagos Supervisor" },
-  { name: "Port Harcourt Depot", address: "Port Haven 12, Port Harcourt", skusCount: 420, capacity: "35% Full", manager: "Lagos Supervisor" },
-];
-
 export async function GET() {
   try {
     await connectToDatabase();

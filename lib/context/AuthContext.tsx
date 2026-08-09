@@ -1,90 +1,90 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import type { UserRole, UserSession } from "@/lib/auth/types";
 
-export type UserRole = "Admin" | "Manager" | "Supervisor" | "Sales";
-
-export interface UserSession {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  assignedLocation: string;
-  supervisedLocations?: string[];
-  permissions?: {
-    allowedPages: string[];
-    allowAllLocations: boolean;
-  };
-}
+export type { UserRole, UserSession };
 
 interface AuthContextType {
   user: UserSession | null;
   loading: boolean;
   login: (userData: UserSession) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   hasRole: (allowedRoles: UserRole[]) => boolean;
   hasPermission: (pageKey: string) => boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   login: () => {},
-  logout: () => {},
+  logout: async () => {},
   hasRole: () => false,
   hasPermission: () => false,
+  refreshUser: async () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserSession | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchLatestPermissions = async (currentUser: UserSession) => {
-      try {
-        const res = await fetch(`/api/auth/permissions?role=${currentUser.role}`);
-        const json = await res.json();
-        if (json.success && json.data) {
-          const updatedUser = {
-            ...currentUser,
-            permissions: {
-              allowedPages: json.data.allowedPages,
-              allowAllLocations: json.data.allowAllLocations,
-            },
-          };
-          setUser(updatedUser);
-          localStorage.setItem("shelfsense_user", JSON.stringify(updatedUser));
-        }
-      } catch (err) {
-        console.error("Failed to sync permissions:", err);
-      }
-    };
-
+  const refreshUser = async () => {
     try {
-      const stored = localStorage.getItem("shelfsense_user");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setUser(parsed);
-        // Sync permissions with the DB in background
-        fetchLatestPermissions(parsed);
+      const res = await fetch("/api/auth/me", { credentials: "include" });
+      if (!res.ok) {
+        setUser(null);
+        return;
+      }
+      const json = await res.json();
+      if (json.success && json.user) {
+        setUser(json.user);
       } else {
         setUser(null);
       }
-    } catch (e) {
+    } catch {
       setUser(null);
-    } finally {
-      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        if (cancelled) return;
+        if (!res.ok) {
+          setUser(null);
+          return;
+        }
+        const json = await res.json();
+        if (json.success && json.user) {
+          setUser(json.user);
+        } else {
+          setUser(null);
+        }
+      } catch {
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const login = (userData: UserSession) => {
     setUser(userData);
-    localStorage.setItem("shelfsense_user", JSON.stringify(userData));
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } catch {
+      // ignore network errors on logout
+    }
     setUser(null);
-    localStorage.removeItem("shelfsense_user");
   };
 
   const hasRole = (allowedRoles: UserRole[]) => {
@@ -100,7 +100,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, hasRole, hasPermission }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, logout, hasRole, hasPermission, refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

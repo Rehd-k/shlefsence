@@ -122,7 +122,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-center items-center p-4">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center animate-spin text-white shadow-lg shadow-indigo-500/30">
+        <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center animate-spin text-white shadow-lg shadow-indigo-500/30">
           <Package className="w-6 h-6 stroke-[2.5]" />
         </div>
         <p className="text-xs text-slate-400 mt-4 animate-pulse">Syncing ERP Session...</p>
@@ -199,7 +199,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         {/* Brand Header */}
         <div className="h-16 px-4 flex items-center justify-between border-b border-slate-800/80">
           <Link href="/" className="flex items-center gap-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0">
               <Package className="w-5 h-5 stroke-[2.5]" />
             </div>
             {!sidebarCollapsed && (
@@ -269,7 +269,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
         {/* System Plan Banner */}
         {!sidebarCollapsed && (
-          <div className="p-3 m-3 rounded-xl bg-gradient-to-b from-slate-800/80 to-slate-800/40 border border-slate-700/60 flex flex-col gap-2">
+          <div className="p-3 m-3 rounded-xl bg-linear-to-b from-slate-800/80 to-slate-800/40 border border-slate-700/60 flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-indigo-300 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" /> Multi-Hub Sync
@@ -324,7 +324,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 )}
               >
                 <Warehouse className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span className="max-w-[160px] sm:max-w-[200px] truncate">{activeLocation}</span>
+                <span className="max-w-40 sm:max-w-50 truncate">{activeLocation}</span>
                 {canSwitchLocations && <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
               </button>
 
@@ -436,9 +436,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      logout();
-                      setUserDropdownOpen(false);
-                      router.push("/login");
+                      void logout().then(() => {
+                        setUserDropdownOpen(false);
+                        router.push("/login");
+                      });
                     }}
                     className="w-full text-left px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2 cursor-pointer"
                   >
@@ -456,10 +457,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             children
           ) : (
             <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl max-w-xl mx-auto my-12 space-y-6 relative overflow-hidden">
-              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-rose-500 via-purple-500 to-indigo-500" />
+              <div className="absolute top-0 inset-x-0 h-1.5 bg-linear-to-r from-rose-500 via-purple-500 to-indigo-500" />
               
               <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 shadow-md">
-                <ShieldCheck className="w-8 h-8 stroke-[2]" />
+                <ShieldCheck className="w-8 h-8 stroke-2" />
               </div>
               
               <div className="space-y-2">

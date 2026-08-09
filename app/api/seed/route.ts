@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
+import { assertSeedAuthorized } from "@/lib/auth/seedGuard";
 import bcrypt from "bcrypt";
 import InventoryItem from "@/lib/models/InventoryItem";
 import InventoryMovement from "@/lib/models/InventoryMovement";
@@ -61,6 +62,9 @@ const INITIAL_WARRANTY_CLAIMS = [
 ];
 
 export async function POST(req: Request) {
+  const denied = assertSeedAuthorized(req);
+  if (denied) return denied;
+
   try {
     await connectToDatabase();
 
@@ -440,6 +444,12 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET(req: Request) {
-  return POST(req);
+export async function GET() {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "GET seeding is disabled. Use POST with Authorization: Bearer <SEED_SECRET>.",
+    },
+    { status: 405 }
+  );
 }

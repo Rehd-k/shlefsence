@@ -29,8 +29,12 @@ import {
 } from "@/lib/types/sales";
 import { CheckCircle2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { useAuth } from "@/lib/context/AuthContext";
+import { useSettings } from "@/lib/context/SettingsContext";
 
 export default function SalesManagementPage() {
+  const { user } = useAuth();
+  const { settings } = useSettings();
   const [activeTab, setActiveTab] = useState<SalesTab>("dashboard");
   const [metrics, setMetrics] = useState<SalesDashboardMetrics>({
     totalRevenue: 0,
@@ -129,25 +133,28 @@ export default function SalesManagementPage() {
     const outstandingInvoicesTotal = invoices.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0);
     const overdueAmount = invoices.filter(inv => inv.status === "Overdue" || (inv.status === "Unpaid" && new Date(inv.dueDate) < new Date())).reduce((sum, inv) => sum + inv.balanceDue, 0);
 
+    // COGS requires mapped unitCost on line items; omit fabricated ratios
     let totalCost = 0;
-    invoices.forEach(inv => {
-      let cost = 0;
-      (inv.items || []).forEach(item => {
-        cost += (item.unitPrice * 0.65) * (item.quantity || 1);
+    let costCoverage = 0;
+    invoices.forEach((inv) => {
+      (inv.items || []).forEach((item) => {
+        const unitCost = (item as { unitCost?: number }).unitCost;
+        if (typeof unitCost === "number") {
+          totalCost += unitCost * (item.quantity || 1);
+          costCoverage += 1;
+        }
       });
-      totalCost += cost || (inv.totalAmount * 0.65);
     });
-    totalCost += posRev * 0.65;
-    const grossProfit = totalRev - totalCost;
-    const grossProfitMargin = totalRev > 0 ? Math.round((grossProfit / totalRev) * 100) : 35;
+    const grossProfit = costCoverage > 0 ? totalRev - totalCost : 0;
+    const grossProfitMargin = costCoverage > 0 && totalRev > 0 ? Math.round((grossProfit / totalRev) * 100) : 0;
 
     setMetrics({
       totalRevenue: totalRev,
-      totalRevenueTrend: 12.5,
+      totalRevenueTrend: 0,
       grossProfit,
       grossProfitMargin,
       totalOrders,
-      totalOrdersTrend: 8.2,
+      totalOrdersTrend: 0,
       avgOrderValue,
       paidInvoicesTotal,
       outstandingInvoicesTotal,
@@ -181,7 +188,7 @@ export default function SalesManagementPage() {
         wholesaleSales: wholesale,
         retailSales: retail,
         ordersCount,
-        target: 12500,
+        target: 0,
       });
     }
     setDailySales(dailyData);
@@ -207,17 +214,17 @@ export default function SalesManagementPage() {
       const revenue = monthInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0) + monthReceipts.reduce((sum, rcp) => sum + rcp.totalAmount, 0);
       
       let cost = 0;
-      monthInvoices.forEach(inv => {
-        let invCost = 0;
-        (inv.items || []).forEach(item => {
-          invCost += (item.unitPrice * 0.65) * (item.quantity || 1);
+      monthInvoices.forEach((inv) => {
+        (inv.items || []).forEach((item) => {
+          const unitCost = (item as { unitCost?: number }).unitCost;
+          if (typeof unitCost === "number") {
+            cost += unitCost * (item.quantity || 1);
+          }
         });
-        cost += invCost || (inv.totalAmount * 0.65);
       });
-      cost += monthReceipts.reduce((sum, rcp) => sum + rcp.totalAmount, 0) * 0.65;
 
       const profit = revenue - cost;
-      const marginPercent = revenue > 0 ? (profit / revenue) * 100 : 35;
+      const marginPercent = revenue > 0 ? (profit / revenue) * 100 : 0;
 
       revVsCost.push({
         month: monthLabel,
@@ -389,11 +396,11 @@ export default function SalesManagementPage() {
       itemsCount: inv.items?.length || 1,
       totalAmount: inv.totalAmount,
       paymentMethod: inv.paymentMethod,
-      cashierName: "Alex Rivers",
+      cashierName: user?.name || "Cashier",
       timestamp: inv.createdAt,
       itemsSummary: (inv.items || []).map((i) => `${i.quantity}x ${i.name}`).join(", ") || `${inv.orderNumber} parts`,
-      storeName: "ShelfSense Hub NY Counter",
-      storeAddress: "350 5th Ave, Suite 1200, New York, NY 10118",
+      storeName: settings?.businessName || "ShelfSense",
+      storeAddress: settings?.businessAddress || "",
     };
     setSelectedReceipt(matchedRec);
     setIsReceiptModalOpen(true);

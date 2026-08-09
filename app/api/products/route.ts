@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import Product from "@/lib/models/Product";
-import { INITIAL_PRODUCTS } from "@/lib/seed/productSeedData";
 
 export async function GET(req: Request) {
   try {
@@ -44,8 +43,12 @@ export async function POST(req: Request) {
   try {
     await connectToDatabase();
     const body = await req.json();
+    const { parseBody } = await import("@/lib/validators/parse");
+    const { productCreateSchema } = await import("@/lib/validators/product");
+    const parsed = parseBody(productCreateSchema, body);
+    if ("error" in parsed) return parsed.error;
 
-    const newProduct = await Product.create(body);
+    const newProduct = await Product.create(parsed.data);
     const obj = newProduct.toObject();
 
     return NextResponse.json({

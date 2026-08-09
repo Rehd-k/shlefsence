@@ -16,23 +16,31 @@ import {
   AlertCircle,
   ExternalLink,
 } from "lucide-react";
-import { SEED_WHOLESALE_CUSTOMERS } from "@/lib/seed/salesSeedData";
-
 interface WholesaleOrdersViewProps {
   onNewWholesaleOrder: () => void;
 }
 
 export const WholesaleOrdersView: React.FC<WholesaleOrdersViewProps> = ({ onNewWholesaleOrder }) => {
-  const [customers, setCustomers] = useState<IWholesaleCustomer[]>(SEED_WHOLESALE_CUSTOMERS);
+  const [customers, setCustomers] = useState<IWholesaleCustomer[]>([]);
   const [search, setSearch] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/sales/customers")
+    fetch("/api/sales/customers", { credentials: "include" })
       .then((res) => res.json())
       .then((json) => {
-        if (json.success && json.data) setCustomers(json.data);
+        if (json.success && json.data) {
+          setCustomers(json.data);
+          setLoadError(null);
+        } else {
+          setCustomers([]);
+          setLoadError(json.error || "Failed to load wholesale customers");
+        }
       })
-      .catch((err) => console.error("Error loading wholesale customers:", err));
+      .catch((err) => {
+        setCustomers([]);
+        setLoadError(err instanceof Error ? err.message : "Failed to load wholesale customers");
+      });
   }, []);
 
   const filteredCustomers = customers.filter(
@@ -47,6 +55,11 @@ export const WholesaleOrdersView: React.FC<WholesaleOrdersViewProps> = ({ onNewW
 
   return (
     <div className="space-y-6">
+      {loadError && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+          {loadError}
+        </div>
+      )}
       {/* Top B2B Credit Line Health Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-4 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">

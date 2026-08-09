@@ -5,7 +5,6 @@ import { IPaymentRecord } from "@/lib/types/sales";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Search, CreditCard, Plus, CheckCircle2, Clock, ShieldCheck, Building2, Banknote } from "lucide-react";
-import { SEED_PAYMENTS } from "@/lib/seed/salesSeedData";
 
 interface PaymentsViewProps {
   payments: IPaymentRecord[];

@@ -3,6 +3,8 @@ import { connectToDatabase } from "@/lib/db/mongodb";
 import User from "@/lib/models/User";
 import RolePermission from "@/lib/models/RolePermission";
 import bcrypt from "bcrypt";
+import { createSessionToken, setSessionCookie } from "@/lib/auth/session";
+import { loginSchema } from "@/lib/validators/auth";
 
 interface SeedUser {
   name: string;
@@ -49,6 +51,9 @@ const DEFAULT_USERS: SeedUser[] = [
 ];
 
 async function seedDefaultUsers() {
+  // Never auto-seed demo users in production
+  if (process.env.NODE_ENV === "production") return;
+
   const count = await User.countDocuments();
   if (count === 0) {
     for (const u of DEFAULT_USERS) {
@@ -58,20 +63,72 @@ async function seedDefaultUsers() {
   }
 }
 
+function defaultPermissions(role: string) {
+  const defaults: Record<string, { allowedPages: string[]; allowAllLocations: boolean }> = {
+    Admin: {
+      allowedPages: [
+        "dashboard",
+        "crm",
+        "products",
+        "inventory",
+        "sales",
+        "purchase-orders",
+        "suppliers",
+        "warehouses",
+        "warranty",
+        "settings",
+      ],
+      allowAllLocations: true,
+    },
+    Manager: {
+      allowedPages: [
+        "dashboard",
+        "crm",
+        "products",
+        "inventory",
+        "sales",
+        "purchase-orders",
+        "suppliers",
+        "warehouses",
+        "warranty",
+      ],
+      allowAllLocations: true,
+    },
+    Supervisor: {
+      allowedPages: [
+        "dashboard",
+        "products",
+        "inventory",
+        "sales",
+        "purchase-orders",
+        "warehouses",
+        "warranty",
+      ],
+      allowAllLocations: false,
+    },
+    Sales: {
+      allowedPages: ["sales"],
+      allowAllLocations: false,
+    },
+  };
+  return defaults[role] || { allowedPages: [], allowAllLocations: false };
+}
+
 export async function POST(req: Request) {
   try {
     await connectToDatabase();
     await seedDefaultUsers();
 
     const body = await req.json();
-    const { email, password } = body;
-
-    if (!email || !password) {
+    const parsed = loginSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "Email and password are required" },
+        { success: false, error: "Invalid credentials payload", details: parsed.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { email, password } = parsed.data;
 
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
@@ -90,38 +147,12 @@ export async function POST(req: Request) {
     }
 
     const userObj = user.toObject();
-    delete (userObj as any).password;
+    delete (userObj as { password?: string }).password;
 
     const permissionsData = await RolePermission.findOne({ role: user.role }).lean();
-    let allowedPages: string[] = [];
-    let allowAllLocations = false;
-
-    if (permissionsData) {
-      allowedPages = permissionsData.allowedPages || [];
-      allowAllLocations = permissionsData.allowAllLocations ?? false;
-    } else {
-      const defaults: Record<string, { allowedPages: string[]; allowAllLocations: boolean }> = {
-        Admin: {
-          allowedPages: ["dashboard", "crm", "products", "inventory", "sales", "purchase-orders", "suppliers", "warehouses", "warranty", "settings"],
-          allowAllLocations: true,
-        },
-        Manager: {
-          allowedPages: ["dashboard", "crm", "products", "inventory", "sales", "purchase-orders", "suppliers", "warehouses", "warranty"],
-          allowAllLocations: true,
-        },
-        Supervisor: {
-          allowedPages: ["dashboard", "products", "inventory", "sales", "purchase-orders", "warehouses", "warranty"],
-          allowAllLocations: false,
-        },
-        Sales: {
-          allowedPages: ["sales"],
-          allowAllLocations: false,
-        },
-      };
-      const d = defaults[user.role] || { allowedPages: [], allowAllLocations: false };
-      allowedPages = d.allowedPages;
-      allowAllLocations = d.allowAllLocations;
-    }
+    const fallback = defaultPermissions(user.role);
+    const allowedPages = permissionsData?.allowedPages || fallback.allowedPages;
+    const allowAllLocations = permissionsData?.allowAllLocations ?? fallback.allowAllLocations;
 
     const userData = {
       ...userObj,
@@ -132,12 +163,23 @@ export async function POST(req: Request) {
       },
     };
 
-    return NextResponse.json({
+    const token = await createSessionToken({
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      role: userData.role,
+      assignedLocation: userData.assignedLocation,
+    });
+
+    const response = NextResponse.json({
       success: true,
       message: "Login successful",
       user: userData,
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    setSessionCookie(response, token);
+    return response;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Login failed";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

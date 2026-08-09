@@ -31,7 +31,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       type: type as CommunicationType,
       subject,
       content,
-      loggedBy: loggedBy || "Alex Rivers",
+      loggedBy: loggedBy || "System",
       date: dateStr,
     };
 

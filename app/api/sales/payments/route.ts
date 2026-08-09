@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import Payment from "@/lib/models/Payment";
-import { SEED_PAYMENTS } from "@/lib/seed/salesSeedData";
-
 export async function GET(req: Request) {
   try {
     await connectToDatabase();
@@ -51,8 +49,12 @@ export async function POST(req: Request) {
   try {
     await connectToDatabase();
     const body = await req.json();
+    const { parseBody } = await import("@/lib/validators/parse");
+    const { paymentCreateSchema } = await import("@/lib/validators/sales");
+    const parsed = parseBody(paymentCreateSchema, body);
+    if ("error" in parsed) return parsed.error;
 
-    const newPayment = await Payment.create(body);
+    const newPayment = await Payment.create(parsed.data);
     const obj = newPayment.toObject();
 
     return NextResponse.json({

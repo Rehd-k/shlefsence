@@ -1,6 +1,15 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/shelfsense";
+function resolveMongoUri(): string {
+  const uri = process.env.MONGODB_URI;
+  if (uri) return uri;
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("MONGODB_URI environment variable is required in production");
+  }
+
+  return "mongodb://localhost:27017/shelfsense";
+}
 
 /**
  * Global variable for caching Mongoose connection across hot reloads in Next.js development.
@@ -25,6 +34,8 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   if (cached?.conn) {
     return cached.conn;
   }
+
+  const MONGODB_URI = resolveMongoUri();
 
   if (!cached?.promise) {
     const opts = {

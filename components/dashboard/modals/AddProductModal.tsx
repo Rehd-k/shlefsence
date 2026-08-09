@@ -1,17 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
-import { Package, Tag, DollarSign, Layers } from "lucide-react";
+import { Package, Tag, DollarSign } from "lucide-react";
 import { QualityGrade } from "@/lib/types/inventory";
 
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onProductAdded: (product: any) => void;
+  onProductAdded: (product: Record<string, unknown>) => void;
 }
 
 export const AddProductModal: React.FC<AddProductModalProps> = ({
@@ -21,41 +21,117 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 }) => {
   const [productName, setProductName] = useState("");
   const [sku, setSku] = useState("");
-  const [brand, setBrand] = useState("Apple");
-  const [phoneModel, setPhoneModel] = useState("iPhone 16 Pro Max");
-  const [category, setCategory] = useState("Screen Replacement");
+  const [brand, setBrand] = useState("");
+  const [phoneModel, setPhoneModel] = useState("");
+  const [category, setCategory] = useState("");
   const [quality, setQuality] = useState<QualityGrade>("OEM_ORIGINAL");
-  const [cost, setCost] = useState("120.00");
-  const [sellingPrice, setSellingPrice] = useState("195.00");
-  const [quantity, setQuantity] = useState("25");
-  const [warehouse, setWarehouse] = useState("Main Hub - New York");
-  const [shelf, setShelf] = useState("A1-S2-B08");
+  const [cost, setCost] = useState("");
+  const [sellingPrice, setSellingPrice] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [warehouse, setWarehouse] = useState("");
+  const [shelf, setShelf] = useState("");
+  const [brandOptions, setBrandOptions] = useState<{ value: string; label: string }[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<{ value: string; label: string }[]>([]);
+  const [warehouseOptions, setWarehouseOptions] = useState<{ value: string; label: string }[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const load = async () => {
+      try {
+        const [brandsRes, catsRes, whRes] = await Promise.all([
+          fetch("/api/brands", { credentials: "include" }),
+          fetch("/api/categories", { credentials: "include" }),
+          fetch("/api/warehouses", { credentials: "include" }),
+        ]);
+        const [brandsJson, catsJson, whJson] = await Promise.all([
+          brandsRes.json(),
+          catsRes.json(),
+          whRes.json(),
+        ]);
+        if (brandsJson.success) {
+          const opts = (brandsJson.data || []).map((b: { name: string }) => ({
+            value: b.name,
+            label: b.name,
+          }));
+          setBrandOptions(opts);
+          if (opts[0] && !brand) setBrand(opts[0].value);
+        }
+        if (catsJson.success) {
+          const opts = (catsJson.data || []).map((c: { name: string }) => ({
+            value: c.name,
+            label: c.name,
+          }));
+          setCategoryOptions(opts);
+          if (opts[0] && !category) setCategory(opts[0].value);
+        }
+        if (whJson.success) {
+          const opts = (whJson.data || []).map((w: { name: string }) => ({
+            value: w.name,
+            label: w.name,
+          }));
+          setWarehouseOptions(opts);
+          if (opts[0] && !warehouse) setWarehouse(opts[0].value);
+        }
+      } catch {
+        // leave options empty; user can still type model/sku
+      }
+    };
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newSku = sku || `SCR-${brand.substring(0, 2).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    setSubmitting(true);
+    setError(null);
+    const newSku = sku || `SKU-${Date.now().toString().slice(-6)}`;
     const costNum = parseFloat(cost) || 0;
     const priceNum = parseFloat(sellingPrice) || 0;
-    const qtyNum = parseInt(quantity) || 0;
+    const qtyNum = parseInt(quantity, 10) || 0;
 
-    const newProduct = {
-      _id: `prod-${Date.now()}`,
+    const payload = {
       sku: newSku,
-      product: productName || `${phoneModel} ${category}`,
+      name: productName || `${phoneModel} ${category}`.trim(),
       brand,
       phoneModel,
       category,
       quality,
       cost: costNum,
       sellingPrice: priceNum,
-      quantity: qtyNum,
+      wholesalePrice: priceNum,
+      stock: { total: qtyNum, available: qtyNum },
       warehouse,
       shelf,
-      createdAt: new Date().toISOString(),
     };
 
-    onProductAdded(newProduct);
-    onClose();
+    try {
+      const res = await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        setError(json.error || "Failed to create product");
+        return;
+      }
+      onProductAdded(json.data);
+      onClose();
+      setProductName("");
+      setSku("");
+      setPhoneModel("");
+      setCost("");
+      setSellingPrice("");
+      setQuantity("");
+      setShelf("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create product");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -67,6 +143,11 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       maxWidth="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+        {error && (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+            {error}
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Product Title"
@@ -91,13 +172,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
             label="Brand"
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
-            options={[
-              { value: "Apple", label: "Apple" },
-              { value: "Samsung", label: "Samsung" },
-              { value: "Google", label: "Google" },
-              { value: "Xiaomi", label: "Xiaomi" },
-              { value: "OnePlus", label: "OnePlus" },
-            ]}
+            options={brandOptions.length ? brandOptions : [{ value: "", label: "No brands loaded" }]}
           />
 
           <Input
@@ -112,14 +187,9 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
             label="Category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            options={[
-              { value: "Screen Replacement", label: "Screen & OLED Assembly" },
-              { value: "Battery", label: "High-Capacity Battery" },
-              { value: "Charging Port", label: "Charging Port Flex Cable" },
-              { value: "Camera Module", label: "Camera Module Unit" },
-              { value: "Back Glass", label: "Rear Glass & Housing" },
-              { value: "IC Micro Chip", label: "IC Chip & Logic Component" },
-            ]}
+            options={
+              categoryOptions.length ? categoryOptions : [{ value: "", label: "No categories loaded" }]
+            }
           />
         </div>
 
@@ -127,7 +197,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           <Select
             label="Quality Grade"
             value={quality}
-            onChange={(e) => setQuality(e.target.value as any)}
+            onChange={(e) => setQuality(e.target.value as QualityGrade)}
             options={[
               { value: "OEM_ORIGINAL", label: "OEM Original" },
               { value: "SERVICE_PACK", label: "Service Pack" },
@@ -137,7 +207,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           />
 
           <Input
-            label="Unit Cost ($)"
+            label="Unit Cost"
             type="number"
             step="0.01"
             value={cost}
@@ -147,7 +217,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           />
 
           <Input
-            label="Selling Price ($)"
+            label="Selling Price"
             type="number"
             step="0.01"
             value={sellingPrice}
@@ -170,11 +240,9 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
             label="Assign Warehouse"
             value={warehouse}
             onChange={(e) => setWarehouse(e.target.value)}
-            options={[
-              { value: "Main Hub - New York", label: "Main Hub - NY" },
-              { value: "West Coast Depot - LA", label: "West Coast Depot - LA" },
-              { value: "Central Hub - Texas", label: "Central Hub - TX" },
-            ]}
+            options={
+              warehouseOptions.length ? warehouseOptions : [{ value: "", label: "No warehouses loaded" }]
+            }
           />
 
           <Input
@@ -190,8 +258,13 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon={<Package className="w-4 h-4" />}>
-            Save SKU to Catalog
+          <Button
+            type="submit"
+            variant="primary"
+            icon={<Package className="w-4 h-4" />}
+            disabled={submitting}
+          >
+            {submitting ? "Saving..." : "Save SKU to Catalog"}
           </Button>
         </div>
       </form>

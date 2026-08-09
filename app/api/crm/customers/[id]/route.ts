@@ -9,8 +9,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   try {
     await connectToDatabase();
     const { id } = await params;
+    const { parseParam } = await import("@/lib/validators/parse");
+    const { customerIdSchema } = await import("@/lib/validators/crm");
+    const idParsed = parseParam(customerIdSchema, id);
+    if ("error" in idParsed) return idParsed.error;
 
-    const customerDoc = await Customer.findById(id).lean();
+    const customerDoc = await Customer.findById(idParsed.data).lean();
     if (!customerDoc) {
       return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
     }

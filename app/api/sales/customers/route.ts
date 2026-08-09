@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import WholesaleCustomer from "@/lib/models/WholesaleCustomer";
-import { SEED_WHOLESALE_CUSTOMERS } from "@/lib/seed/salesSeedData";
-
 export async function GET(req: Request) {
   try {
     await connectToDatabase();

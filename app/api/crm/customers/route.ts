@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import Customer from "@/lib/models/Customer";
-import { INITIAL_CRM_CUSTOMERS } from "@/lib/seed/crmSeedData";
-
 export async function GET(req: Request) {
   try {
     await connectToDatabase();
@@ -63,13 +61,11 @@ export async function POST(req: Request) {
   try {
     await connectToDatabase();
     const body = await req.json();
-
-    if (!body.businessName || !body.contactName || !body.email || !body.phone) {
-      return NextResponse.json(
-        { success: false, error: "Business Name, Contact Name, Email, and Phone are required." },
-        { status: 400 }
-      );
-    }
+    const { parseBody } = await import("@/lib/validators/parse");
+    const { customerCreateSchema } = await import("@/lib/validators/crm");
+    const parsed = parseBody(customerCreateSchema, body);
+    if ("error" in parsed) return parsed.error;
+    const bodyData = parsed.data as Record<string, unknown>;
 
     const avatarColors = [
       "bg-indigo-600",
@@ -80,25 +76,26 @@ export async function POST(req: Request) {
       "bg-teal-600",
     ];
     const randomAvatar = avatarColors[Math.floor(Math.random() * avatarColors.length)];
+    const customerType = String(bodyData.customerType || "Repair Shop");
 
     const initialTimeline = [
       {
         id: `tl-${Date.now()}`,
-        type: "communication",
+        type: "communication" as const,
         title: "Customer Account Created",
-        description: `Customer profile initialized as ${body.customerType || "Repair Shop"}`,
+        description: `Customer profile initialized as ${customerType}`,
         badge: "New Profile",
         date: new Date().toISOString(),
       },
     ];
 
     const newCustomer = await Customer.create({
-      ...body,
-      avatarColor: body.avatarColor || randomAvatar,
-      outstandingDebt: Number(body.outstandingDebt) || 0,
-      walletBalance: Number(body.walletBalance) || 0,
-      creditLimit: Number(body.creditLimit) || 0,
-      tags: body.tags || [body.customerType || "Repair Shop"],
+      ...bodyData,
+      avatarColor: (bodyData.avatarColor as string) || randomAvatar,
+      outstandingDebt: Number(bodyData.outstandingDebt) || 0,
+      walletBalance: Number(bodyData.walletBalance) || 0,
+      creditLimit: Number(bodyData.creditLimit) || 0,
+      tags: (bodyData.tags as string[]) || [customerType],
       timeline: initialTimeline,
       communications: [],
       returnsHistory: [],

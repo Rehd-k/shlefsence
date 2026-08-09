@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { setCurrencySymbolCache } from "@/lib/utils/formatCurrency";
 
 export interface IStoreSettings {
   businessName: string;
@@ -32,10 +33,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch("/api/settings");
+      const res = await fetch("/api/settings", { credentials: "include" });
       const json = await res.json();
       if (json.success && json.data) {
         setSettings(json.data);
+        setCurrencySymbolCache(json.data.currencyDefault || "₦");
         localStorage.setItem("shelfsense_settings", JSON.stringify(json.data));
       }
     } catch (err) {
@@ -54,11 +56,13 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(newSettings),
       });
       const json = await res.json();
       if (json.success && json.data) {
         setSettings(json.data);
+        setCurrencySymbolCache(json.data.currencyDefault || "₦");
         localStorage.setItem("shelfsense_settings", JSON.stringify(json.data));
         return true;
       }

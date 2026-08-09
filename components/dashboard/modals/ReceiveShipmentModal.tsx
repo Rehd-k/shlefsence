@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
-import { PackageCheck, Truck, CheckCircle2, ShieldAlert } from "lucide-react";
+import { PackageCheck, Truck } from "lucide-react";
 
 interface ReceiveShipmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onShipmentReceived: (receipt: any) => void;
+  onShipmentReceived: (receipt: Record<string, unknown>) => void;
 }
 
 export const ReceiveShipmentModal: React.FC<ReceiveShipmentModalProps> = ({
@@ -18,12 +18,30 @@ export const ReceiveShipmentModal: React.FC<ReceiveShipmentModalProps> = ({
   onClose,
   onShipmentReceived,
 }) => {
-  const [poNumber, setPoNumber] = useState("PO-2026-8810");
-  const [supplier, setSupplier] = useState("Foxconn Electronics Shenzhen");
-  const [receivedQty, setReceivedQty] = useState("150");
+  const [poNumber, setPoNumber] = useState("");
+  const [supplier, setSupplier] = useState("");
+  const [receivedQty, setReceivedQty] = useState("");
   const [damagedQty, setDamagedQty] = useState("0");
-  const [targetBin, setTargetBin] = useState("A1-S1-B01");
-  const [notes, setNotes] = useState("Inspected by Receiving QC, all items Grade A OEM");
+  const [targetBin, setTargetBin] = useState("");
+  const [notes, setNotes] = useState("");
+  const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetch("/api/suppliers", { credentials: "include" })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          const opts = (json.data || []).map((s: { name: string }) => ({
+            value: s.name,
+            label: s.name,
+          }));
+          setSupplierOptions(opts);
+          if (opts[0]) setSupplier(opts[0].value);
+        }
+      })
+      .catch(() => undefined);
+  }, [isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,8 +49,8 @@ export const ReceiveShipmentModal: React.FC<ReceiveShipmentModalProps> = ({
       id: `rcpt-${Date.now()}`,
       poNumber,
       supplier,
-      receivedQty: parseInt(receivedQty) || 0,
-      damagedQty: parseInt(damagedQty) || 0,
+      receivedQty: parseInt(receivedQty, 10) || 0,
+      damagedQty: parseInt(damagedQty, 10) || 0,
       targetBin,
       notes,
       receivedAt: new Date().toISOString(),
@@ -40,6 +58,11 @@ export const ReceiveShipmentModal: React.FC<ReceiveShipmentModalProps> = ({
 
     onShipmentReceived(receipt);
     onClose();
+    setPoNumber("");
+    setReceivedQty("");
+    setDamagedQty("0");
+    setTargetBin("");
+    setNotes("");
   };
 
   return (
@@ -64,11 +87,9 @@ export const ReceiveShipmentModal: React.FC<ReceiveShipmentModalProps> = ({
             label="Supplier"
             value={supplier}
             onChange={(e) => setSupplier(e.target.value)}
-            options={[
-              { value: "Foxconn Electronics Shenzhen", label: "Foxconn Electronics" },
-              { value: "Sunsky Technology Wholesale", label: "Sunsky Tech" },
-              { value: "DJI & Parts Global Corp", label: "DJI & Parts" },
-            ]}
+            options={
+              supplierOptions.length ? supplierOptions : [{ value: "", label: "No suppliers loaded" }]
+            }
           />
         </div>
 
@@ -100,7 +121,7 @@ export const ReceiveShipmentModal: React.FC<ReceiveShipmentModalProps> = ({
           label="QC Inspection Notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="e.g. Verified flex cables & original seals intact"
+          placeholder="Optional QC notes"
         />
 
         <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
@@ -108,7 +129,7 @@ export const ReceiveShipmentModal: React.FC<ReceiveShipmentModalProps> = ({
             Cancel
           </Button>
           <Button type="submit" variant="primary" icon={<PackageCheck className="w-4 h-4" />}>
-            Log & Receive Shipment into Bin
+            Confirm Receipt
           </Button>
         </div>
       </form>

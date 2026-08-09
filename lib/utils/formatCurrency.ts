@@ -1,22 +1,33 @@
+let cachedSymbol: string | null = null;
+
 function getCurrencySymbol(): string {
+  if (cachedSymbol) return cachedSymbol;
+
   if (typeof window !== "undefined") {
     try {
       const stored = localStorage.getItem("shelfsense_settings");
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && parsed.currencyDefault) {
-          return parsed.currencyDefault;
+          cachedSymbol = String(parsed.currencyDefault);
+          return cachedSymbol as string;
         }
       }
-    } catch (e) {
+    } catch {
       // Ignore errors in SSR or JSON parsing
     }
   }
   return "₦";
 }
 
+/** Call after settings load to avoid SSR/client currency mismatches. */
+export function setCurrencySymbolCache(symbol: string) {
+  cachedSymbol = symbol;
+}
+
 /**
  * Utility for formatting monetary amounts dynamically based on system settings.
+ * Uses a stable default (₦) during SSR to avoid hydration mismatches.
  */
 export function formatCurrency(amount: number): string {
   const symbol = getCurrencySymbol();
@@ -46,4 +57,3 @@ export function formatCurrencyCompact(amount: number): string {
 
 // Fallback exports for backward compatibility
 export { formatCurrency as formatNaira, formatCurrencyCompact as formatNairaCompact };
-

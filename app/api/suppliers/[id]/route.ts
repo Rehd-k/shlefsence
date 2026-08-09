@@ -77,7 +77,7 @@ export async function PUT(
         type: body.communication.type || "Note",
         subject: body.communication.subject,
         summary: body.communication.summary,
-        author: body.communication.author || "Alex Rivers",
+        author: body.communication.author || "System",
         date: body.communication.date || new Date().toISOString().split("T")[0],
       };
       existing.communications.unshift(newComm as any);

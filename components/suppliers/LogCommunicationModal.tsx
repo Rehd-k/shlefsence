@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { ISupplier } from "@/lib/types/supplier";
 import { MessageSquare, Send } from "lucide-react";
+import { useAuth } from "@/lib/context/AuthContext";
 
 interface LogCommunicationModalProps {
   isOpen: boolean;
@@ -21,12 +22,13 @@ export const LogCommunicationModal: React.FC<LogCommunicationModalProps> = ({
   supplier,
   onLogged,
 }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     type: "Meeting",
     subject: "",
     summary: "",
-    author: "Alex Rivers",
+    author: "",
     date: new Date().toISOString().split("T")[0],
   });
 
@@ -41,7 +43,7 @@ export const LogCommunicationModal: React.FC<LogCommunicationModalProps> = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "ADD_COMMUNICATION",
-          communication: formData,
+          communication: { ...formData, author: formData.author || user?.name || "System" },
         }),
       });
 
@@ -53,7 +55,7 @@ export const LogCommunicationModal: React.FC<LogCommunicationModalProps> = ({
           type: "Meeting",
           subject: "",
           summary: "",
-          author: "Alex Rivers",
+          author: user?.name || "",
           date: new Date().toISOString().split("T")[0],
         });
       } else {

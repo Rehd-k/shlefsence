@@ -27,28 +27,10 @@ export const InventoryFilterBar: React.FC<InventoryFilterBarProps> = ({
   filters,
   onFilterChange,
   onResetFilters,
-  availableBrands = ["Apple", "Samsung", "Google", "Xiaomi", "Huawei", "OnePlus"],
-  availableSuppliers = [
-    "Foxconn Direct Wholesale",
-    "Shenzhen Parts Co.",
-    "Sunsky Logistics",
-    "OEM Global Parts",
-  ],
-  availableCategories = [
-    "Screen Replacement",
-    "Battery",
-    "Charging Port",
-    "Camera Module",
-    "Back Glass",
-    "Motherboard IC",
-    "Flex Cable",
-  ],
-  availableWarehouses = [
-    "Main Hub - New York",
-    "West Coast Depot - LA",
-    "Central Hub - Texas",
-    "EU Logistics - Rotterdam",
-  ],
+  availableBrands = [],
+  availableSuppliers = [],
+  availableCategories = [],
+  availableWarehouses = [],
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 

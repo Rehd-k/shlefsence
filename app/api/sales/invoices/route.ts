@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import Invoice from "@/lib/models/Invoice";
-import { SEED_INVOICES } from "@/lib/seed/salesSeedData";
-
 export async function GET(req: Request) {
   try {
     await connectToDatabase();
@@ -53,8 +51,12 @@ export async function POST(req: Request) {
   try {
     await connectToDatabase();
     const body = await req.json();
+    const { parseBody } = await import("@/lib/validators/parse");
+    const { invoiceCreateSchema } = await import("@/lib/validators/sales");
+    const parsed = parseBody(invoiceCreateSchema, body);
+    if ("error" in parsed) return parsed.error;
 
-    const newInvoice = await Invoice.create(body);
+    const newInvoice = await Invoice.create(parsed.data);
     const obj = newInvoice.toObject();
 
     return NextResponse.json({

@@ -16,31 +16,31 @@ import { TransferStockModal } from "@/components/dashboard/modals/TransferStockM
 import { ReceiveShipmentModal } from "@/components/dashboard/modals/ReceiveShipmentModal";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { EMPTY_DASHBOARD_METRICS } from "@/lib/utils/emptyDashboard";
 import {
-  INITIAL_DASHBOARD_METRICS,
-  INITIAL_DAILY_SALES,
-  INITIAL_MONTHLY_REVENUE,
-  INITIAL_CATEGORY_SALES,
-  INITIAL_TOP_BRANDS,
-  INITIAL_TOP_MODELS,
-  INITIAL_LATEST_ORDERS,
-  INITIAL_LOW_STOCK_PRODUCTS,
-  INITIAL_RECENT_PAYMENTS,
-} from "@/lib/seed/dashboardSeedData";
-import { LatestOrder, LowStockProduct, RecentPayment } from "@/lib/types/dashboard";
+  LatestOrder,
+  LowStockProduct,
+  RecentPayment,
+  DailySalesPoint,
+  MonthlyRevenuePoint,
+  CategorySalesPoint,
+  BrandSalesPoint,
+  PhoneModelSalesPoint,
+} from "@/lib/types/dashboard";
 import { RefreshCcw, Calendar, Filter, Sparkles, CheckCircle, ArrowRight } from "lucide-react";
 
 export default function ERPDashboardPage() {
-  const [metrics, setMetrics] = useState(INITIAL_DASHBOARD_METRICS);
-  const [dailySales, setDailySales] = useState(INITIAL_DAILY_SALES);
-  const [monthlyRevenue, setMonthlyRevenue] = useState(INITIAL_MONTHLY_REVENUE);
-  const [categorySales, setCategorySales] = useState(INITIAL_CATEGORY_SALES);
-  const [topBrands, setTopBrands] = useState(INITIAL_TOP_BRANDS);
-  const [topModels, setTopModels] = useState(INITIAL_TOP_MODELS);
-  const [orders, setOrders] = useState<LatestOrder[]>(INITIAL_LATEST_ORDERS);
-  const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[]>(INITIAL_LOW_STOCK_PRODUCTS);
-  const [payments, setPayments] = useState<RecentPayment[]>(INITIAL_RECENT_PAYMENTS);
+  const [metrics, setMetrics] = useState(EMPTY_DASHBOARD_METRICS);
+  const [dailySales, setDailySales] = useState<DailySalesPoint[]>([]);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenuePoint[]>([]);
+  const [categorySales, setCategorySales] = useState<CategorySalesPoint[]>([]);
+  const [topBrands, setTopBrands] = useState<BrandSalesPoint[]>([]);
+  const [topModels, setTopModels] = useState<PhoneModelSalesPoint[]>([]);
+  const [orders, setOrders] = useState<LatestOrder[]>([]);
+  const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[]>([]);
+  const [payments, setPayments] = useState<RecentPayment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Filters
   const [timeRange, setTimeRange] = useState<"today" | "7d" | "30d" | "quarter">("30d");
@@ -65,22 +65,25 @@ export default function ERPDashboardPage() {
 
   const fetchDashboardData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch("/api/dashboard");
+      const res = await fetch("/api/dashboard", { credentials: "include" });
       const json = await res.json();
       if (json.success && json.data) {
-        setMetrics(json.data.metrics);
-        setDailySales(json.data.dailySales);
-        setMonthlyRevenue(json.data.monthlyRevenue);
-        setCategorySales(json.data.categorySales);
-        setTopBrands(json.data.topBrands);
-        setTopModels(json.data.topModels);
-        setOrders(json.data.latestOrders);
-        setLowStockProducts(json.data.lowStockProducts);
-        setPayments(json.data.recentPayments);
+        setMetrics(json.data.metrics ?? EMPTY_DASHBOARD_METRICS);
+        setDailySales(json.data.dailySales ?? []);
+        setMonthlyRevenue(json.data.monthlyRevenue ?? []);
+        setCategorySales(json.data.categorySales ?? []);
+        setTopBrands(json.data.topBrands ?? []);
+        setTopModels(json.data.topModels ?? []);
+        setOrders(json.data.latestOrders ?? []);
+        setLowStockProducts(json.data.lowStockProducts ?? []);
+        setPayments(json.data.recentPayments ?? []);
+      } else {
+        setError(json.error || "Failed to load dashboard data");
       }
     } catch (err) {
-      console.error("Error fetching dashboard data:", err);
+      setError(err instanceof Error ? err.message : "Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
@@ -155,6 +158,12 @@ export default function ERPDashboardPage() {
     <AppLayout
       onQuickAction={handleLayoutQuickAction}
     >
+      {error && (
+        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+          {error}
+        </div>
+      )}
+
       {/* Toast Confirmation Overlay */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5">

@@ -5,8 +5,6 @@ import { IReceipt } from "@/lib/types/sales";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Search, Receipt, Printer, Eye, Store } from "lucide-react";
-import { SEED_RECEIPTS } from "@/lib/seed/salesSeedData";
-
 interface ReceiptsViewProps {
   receipts: IReceipt[];
   onViewReceipt: (receipt: IReceipt) => void;
@@ -65,7 +63,7 @@ export const ReceiptsView: React.FC<ReceiptsViewProps> = ({ receipts, onViewRece
                     <Badge variant="purple" size="sm">{rec.customerType}</Badge>
                   </div>
                 </td>
-                <td className="px-4 py-3.5 max-w-[240px] truncate text-slate-600 dark:text-slate-400 font-mono text-[11px]">
+                <td className="px-4 py-3.5 max-w-60 truncate text-slate-600 dark:text-slate-400 font-mono text-[11px]">
                   {rec.itemsSummary}
                 </td>
                 <td className="px-4 py-3.5 text-right font-extrabold text-slate-900 dark:text-white font-mono text-sm">
