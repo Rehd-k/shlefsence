@@ -1,0 +1,51 @@
+{
+  "name": "ShelfSense ERP",
+  "short_name": "ShelfSense",
+  "description": "Enterprise-grade multi-hub inventory, POS, purchasing, and sales fulfillment system.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/logo/logo_black.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo/logo_black.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo/logo_black.png",
+      "sizes": "500x500",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo/logo_white.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any",
+      "media": "(prefers-color-scheme: dark)"
+    },
+    {
+      "src": "/logo/logo_white.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any",
+      "media": "(prefers-color-scheme: dark)"
+    },
+    {
+      "src": "/logo/logo_white.png",
+      "sizes": "500x500",
+      "type": "image/png",
+      "purpose": "any",
+      "media": "(prefers-color-scheme: dark)"
+    }
+  ]
+}

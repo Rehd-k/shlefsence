@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { Badge } from "@/components/ui/Badge";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 export interface AppLayoutProps {
   children: React.ReactNode;
@@ -122,9 +123,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-center items-center p-4">
-        <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center animate-spin text-white shadow-lg shadow-indigo-500/30">
-          <Package className="w-6 h-6 stroke-[2.5]" />
-        </div>
+        <BrandLogo
+          size="lg"
+          surface="onDark"
+          className="rounded-2xl animate-pulse shadow-lg shadow-indigo-500/20"
+        />
         <p className="text-xs text-slate-400 mt-4 animate-pulse">Syncing ERP Session...</p>
       </div>
     );
@@ -199,9 +202,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         {/* Brand Header */}
         <div className="h-16 px-4 flex items-center justify-between border-b border-slate-800/80">
           <Link href="/" className="flex items-center gap-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0">
-              <Package className="w-5 h-5 stroke-[2.5]" />
-            </div>
+            <BrandLogo
+              size="md"
+              surface="onDark"
+              className="shadow-lg shadow-indigo-500/20"
+            />
             {!sidebarCollapsed && (
               <div className="flex flex-col truncate">
                 <span className="font-bold text-white text-base tracking-tight flex items-center gap-1.5">

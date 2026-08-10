@@ -4,8 +4,9 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth, UserRole } from "@/lib/context/AuthContext";
-import { Package, Mail, Lock, User, Phone, MapPin, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, Phone, MapPin, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -65,9 +66,11 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-center items-center p-4 relative overflow-hidden">
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white mx-auto shadow-lg shadow-indigo-500/30">
-            <Package className="w-6 h-6 stroke-[2.5]" />
-          </div>
+          <BrandLogo
+            size="lg"
+            surface="onDark"
+            className="mx-auto rounded-2xl shadow-lg shadow-indigo-500/30"
+          />
           <h1 className="text-2xl font-black tracking-tight text-white">Create Account</h1>
           <p className="text-xs text-slate-400">Join ShelfSense ERP for multi-hub phone parts distribution</p>
         </div>
