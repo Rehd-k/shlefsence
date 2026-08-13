@@ -1,29 +1,20 @@
-import { SignJWT, jwtVerify, type JWTPayload } from "jose";
+import { SignJWT } from "jose";
 import { NextResponse } from "next/server";
 import type { UserRole } from "@/lib/auth/types";
+import {
+  SESSION_COOKIE,
+  SESSION_MAX_AGE,
+  getAuthSecretBytes,
+  verifySessionToken,
+  type SessionPayload,
+} from "@/lib/auth/sessionEdge";
 
-export const SESSION_COOKIE = "shelfsense_session";
-const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
-
-export interface SessionPayload extends JWTPayload {
-  sub: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  assignedLocation: string;
-  organizationId: string;
-}
-
-function getSecretKey(): Uint8Array {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("AUTH_SECRET environment variable is required in production");
-    }
-    return new TextEncoder().encode("dev-only-shelfsense-auth-secret-change-me");
-  }
-  return new TextEncoder().encode(secret);
-}
+export {
+  SESSION_COOKIE,
+  SESSION_MAX_AGE,
+  verifySessionToken,
+  type SessionPayload,
+};
 
 export async function createSessionToken(payload: {
   id: string;
@@ -44,24 +35,7 @@ export async function createSessionToken(payload: {
     .setSubject(payload.id)
     .setIssuedAt()
     .setExpirationTime(`${SESSION_MAX_AGE}s`)
-    .sign(getSecretKey());
-}
-
-export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
-  try {
-    const { payload } = await jwtVerify(token, getSecretKey());
-    if (
-      !payload.sub ||
-      typeof payload.email !== "string" ||
-      typeof payload.role !== "string" ||
-      typeof payload.organizationId !== "string"
-    ) {
-      return null;
-    }
-    return payload as SessionPayload;
-  } catch {
-    return null;
-  }
+    .sign(getAuthSecretBytes());
 }
 
 export function setSessionCookie(response: NextResponse, token: string): void {

@@ -32,8 +32,14 @@ import Category from "@/lib/models/Category";
 import QualityGrade from "@/lib/models/QualityGrade";
 import { seedOrgDefaults } from "@/lib/tenancy/bootstrapOrganization";
 import { uniqueOrgSlug } from "@/lib/tenancy/slugify";
+import type { Model } from "mongoose";
 
-const TENANTED_MODELS = [
+type TenantBackfillModel = {
+  modelName: string;
+  updateMany: Model<unknown>["updateMany"];
+};
+
+const TENANTED_MODELS: TenantBackfillModel[] = [
   User,
   RolePermission,
   StoreSettings,
@@ -61,7 +67,7 @@ const TENANTED_MODELS = [
   Brand,
   Category,
   QualityGrade,
-] as const;
+];
 
 /**
  * Ensures a default organization exists and backfills organizationId on

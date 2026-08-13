@@ -4,6 +4,13 @@ import RolePermission from "@/lib/models/RolePermission";
 import { requireTenantSession } from "@/lib/auth/apiAuth";
 import { DEFAULT_ROLE_PERMISSIONS } from "@/lib/tenancy/defaultPermissions";
 
+type PermissionView = {
+  organizationId: string;
+  role: string;
+  allowedPages: string[];
+  allowAllLocations: boolean;
+};
+
 export async function GET(request: Request) {
   try {
     const auth = await requireTenantSession(request);
@@ -19,18 +26,27 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, data: allPerms });
     }
 
-    let perms = await RolePermission.findOne({ organizationId, role }).lean();
+    const permsDoc = await RolePermission.findOne({ organizationId, role }).lean();
 
-    if (!perms && DEFAULT_ROLE_PERMISSIONS[role]) {
-      perms = {
+    let data: PermissionView | null = permsDoc
+      ? {
+          organizationId: String(permsDoc.organizationId),
+          role: permsDoc.role,
+          allowedPages: permsDoc.allowedPages || [],
+          allowAllLocations: permsDoc.allowAllLocations ?? false,
+        }
+      : null;
+
+    if (!data && DEFAULT_ROLE_PERMISSIONS[role]) {
+      data = {
         organizationId,
         role,
         allowedPages: DEFAULT_ROLE_PERMISSIONS[role].allowedPages,
         allowAllLocations: DEFAULT_ROLE_PERMISSIONS[role].allowAllLocations,
-      } as typeof perms;
+      };
     }
 
-    return NextResponse.json({ success: true, data: perms });
+    return NextResponse.json({ success: true, data });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to load permissions";
     return NextResponse.json({ success: false, error: message }, { status: 500 });

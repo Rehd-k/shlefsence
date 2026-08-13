@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/auth/session", () => ({
+vi.mock("@/lib/auth/sessionEdge", () => ({
   SESSION_COOKIE: "shelfsense_session",
   verifySessionToken: vi.fn(),
 }));
 
 import { middleware } from "@/middleware";
-import { verifySessionToken } from "@/lib/auth/session";
+import { verifySessionToken } from "@/lib/auth/sessionEdge";
 import { NextRequest } from "next/server";
 
 function makeReq(path: string, cookie?: string) {

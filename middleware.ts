@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session";
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/sessionEdge";
 
 const PUBLIC_PAGE_PATHS = ["/login", "/register"];
 const PUBLIC_API_PREFIXES = ["/api/auth/login", "/api/auth/register", "/api/auth/logout", "/api/auth/me"];
