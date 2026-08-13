@@ -6,8 +6,10 @@ import {
   ITimelineEvent,
   IReturnItem,
 } from "@/lib/types/crm";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 export interface ICustomerDocument extends Document {
+  organizationId: OrganizationId;
   businessName: string;
   contactName: string;
   customerType: CustomerType;
@@ -84,6 +86,7 @@ const ReturnItemSchema = new Schema<IReturnItem>({
 
 const CustomerSchema = new Schema<ICustomerDocument>(
   {
+    ...organizationIdField,
     businessName: { type: String, required: true, index: true },
     contactName: { type: String, required: true, index: true },
     customerType: {
@@ -93,7 +96,7 @@ const CustomerSchema = new Schema<ICustomerDocument>(
       default: "Repair Shop",
       index: true,
     },
-    email: { type: String, required: true, unique: true, index: true },
+    email: { type: String, required: true, index: true },
     phone: { type: String, required: true },
     address: { type: AddressSchema, required: true },
     warehouse: { type: String, index: true, default: "Main Hub - Lagos" },
@@ -120,6 +123,8 @@ const CustomerSchema = new Schema<ICustomerDocument>(
     timestamps: true,
   }
 );
+
+CustomerSchema.index({ organizationId: 1, email: 1 }, { unique: true });
 
 const Customer: Model<ICustomerDocument> =
   mongoose.models.Customer || mongoose.model<ICustomerDocument>("Customer", CustomerSchema);

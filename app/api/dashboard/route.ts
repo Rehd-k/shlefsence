@@ -7,9 +7,14 @@ import PurchaseOrder from "@/lib/models/PurchaseOrder";
 import WarrantyClaim from "@/lib/models/WarrantyClaim";
 import Supplier from "@/lib/models/Supplier";
 import WholesaleCustomer from "@/lib/models/WholesaleCustomer";
+import { requireTenantSession } from "@/lib/auth/apiAuth";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
 
     const now = new Date();
@@ -43,13 +48,13 @@ export async function GET() {
     startOfWeekAgo.setDate(startOfWeekAgo.getDate() - 6);
 
     // 2. Fetch invoice collections for calculations
-    const invoicesToday = await Invoice.find({ createdAt: { $gte: startOfToday, $lte: endOfToday } }).lean();
-    const invoicesYesterday = await Invoice.find({ createdAt: { $gte: startOfYesterday, $lte: endOfYesterday } }).lean();
-    const invoicesThisMonth = await Invoice.find({ createdAt: { $gte: startOfThisMonth, $lte: now } }).lean();
-    const invoicesLastMonth = await Invoice.find({ createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }).lean();
+    const invoicesToday = await Invoice.find({ organizationId, createdAt: { $gte: startOfToday, $lte: endOfToday } }).lean();
+    const invoicesYesterday = await Invoice.find({ organizationId, createdAt: { $gte: startOfYesterday, $lte: endOfYesterday } }).lean();
+    const invoicesThisMonth = await Invoice.find({ organizationId, createdAt: { $gte: startOfThisMonth, $lte: now } }).lean();
+    const invoicesLastMonth = await Invoice.find({ organizationId, createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }).lean();
     
     // Fetch all inventory items to create a SKU to cost & price mapping
-    const inventoryItems = await InventoryItem.find({}).select("sku cost sellingPrice quantity reorderPoint status shelf brand phoneModel category").lean();
+    const inventoryItems = await InventoryItem.find({ organizationId }).select("sku cost sellingPrice quantity reorderPoint status shelf brand phoneModel category").lean();
     const skuCostMap: Record<string, number> = {};
     inventoryItems.forEach((item: any) => {
       skuCostMap[item.sku] = item.cost || 0;
@@ -94,7 +99,7 @@ export async function GET() {
 
     // Customer Debts (Outstanding Debts)
     // Sum of balanceDue of unpaid or partially paid invoices
-    const unpaidInvoices = await Invoice.find({ status: { $in: ["Unpaid", "Partial", "Overdue"] } }).lean();
+    const unpaidInvoices = await Invoice.find({ organizationId, status: { $in: ["Unpaid", "Partial", "Overdue"] } }).lean();
     const totalBalanceDue = unpaidInvoices.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0);
     const uniqueDebtors = new Set(unpaidInvoices.map((inv) => inv.customerName));
     const overdueInvoices = unpaidInvoices.filter((inv) => {
@@ -105,7 +110,7 @@ export async function GET() {
     const overdueBalanceDue = overdueInvoices.reduce((sum, inv) => sum + (inv.balanceDue || 0), 0);
 
     // Supplier Payables
-    const suppliers = await Supplier.find({}).lean();
+    const suppliers = await Supplier.find({ organizationId }).lean();
     const outstandingPayables = suppliers.reduce((sum, s: any) => sum + (s.outstandingBalance || 0), 0);
     const suppliersWithBalance = suppliers.filter((s: any) => (s.outstandingBalance || 0) > 0);
     const dueIn7DaysPayables = suppliersWithBalance.reduce((sum, s: any) => {
@@ -122,7 +127,7 @@ export async function GET() {
     const lostRevenueEst = inventoryItems.filter(item => (item.quantity || 0) === 0).reduce((sum, item) => sum + ((item.sellingPrice || 0) * (item.reorderPoint || 10)), 0);
 
     // Pending POs
-    const pendingPOs = await PurchaseOrder.find({ status: { $in: ["Awaiting Arrival", "In Transit", "Draft", "Approved"] } }).lean();
+    const pendingPOs = await PurchaseOrder.find({ organizationId, status: { $in: ["Awaiting Arrival", "In Transit", "Draft", "Approved"] } }).lean();
     const poCount = pendingPOs.length;
     const poTotalValue = pendingPOs.reduce((sum, po) => sum + (po.totalValue || 0), 0);
     const poExpectedToday = pendingPOs.filter((po) => {
@@ -132,7 +137,7 @@ export async function GET() {
     }).length;
 
     // Awaiting Dispatch
-    const awaitingInvoices = await Invoice.find({ fulfillmentStatus: "Awaiting Dispatch" }).lean();
+    const awaitingInvoices = await Invoice.find({ organizationId, fulfillmentStatus: "Awaiting Dispatch" }).lean();
     const awaitingCount = awaitingInvoices.length;
     const awaitingValue = awaitingInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
     const urgentAwaitingCount = awaitingInvoices.filter((inv) => {
@@ -142,7 +147,7 @@ export async function GET() {
     }).length;
 
     // Warranty Claims
-    const warrantyClaims = await WarrantyClaim.find({}).lean();
+    const warrantyClaims = await WarrantyClaim.find({ organizationId }).lean();
     const claimsCount = warrantyClaims.length;
     const pendingInspectionClaims = warrantyClaims.filter((c) => c.status === "Pending Inspection").length;
     const approvedCount = warrantyClaims.filter((c) => c.status && c.status.toLowerCase().includes("approved")).length;
@@ -151,7 +156,7 @@ export async function GET() {
     const approvedRate = totalResolved > 0 ? (approvedCount / totalResolved) * 105 : 92.5;
 
     // POs This Week
-    const poThisWeek = await PurchaseOrder.find({ createdAt: { $gte: startOfWeekAgo } }).lean();
+    const poThisWeek = await PurchaseOrder.find({ organizationId, createdAt: { $gte: startOfWeekAgo } }).lean();
     const poThisWeekCount = poThisWeek.length;
     const poThisWeekSpend = poThisWeek.reduce((sum, po) => sum + (po.totalValue || 0), 0);
 
@@ -235,7 +240,7 @@ export async function GET() {
       const endOfDay = new Date(d);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const dayInvoices = await Invoice.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean();
+      const dayInvoices = await Invoice.find({ organizationId, createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean();
       const sales = dayInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
       const orders = dayInvoices.length;
 
@@ -257,7 +262,7 @@ export async function GET() {
       const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
       const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
 
-      const monthInvoices = await Invoice.find({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }).lean();
+      const monthInvoices = await Invoice.find({ organizationId, createdAt: { $gte: startOfMonth, $lte: endOfMonth } }).lean();
       const revenue = monthInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
       const cost = calculateCostOfInvoices(monthInvoices);
       const grossProfit = revenue - cost;
@@ -275,7 +280,7 @@ export async function GET() {
     const brandSalesMap: Record<string, { sales: number; unitsSold: number }> = {};
     const modelSalesMap: Record<string, { brand: string; unitsSold: number; revenue: number }> = {};
 
-    const allInvoices = await Invoice.find({}).lean();
+    const allInvoices = await Invoice.find({ organizationId }).lean();
     let totalAllSales = 0;
 
     allInvoices.forEach((inv) => {
@@ -343,6 +348,7 @@ export async function GET() {
 
     // 7. Get Low Stock Products (InventoryItem where quantity <= reorderPoint)
     const dbLowStockItems = await InventoryItem.find({
+      organizationId,
       quantity: { $gt: 0 },
       $expr: { $lte: ["$quantity", "$reorderPoint"] },
     }).limit(5).lean();
@@ -361,7 +367,7 @@ export async function GET() {
     }));
 
     // 8. Latest Orders & Recent Payments
-    const latestInvoicesList = await Invoice.find({}).sort({ createdAt: -1 }).limit(5).lean();
+    const latestInvoicesList = await Invoice.find({ organizationId }).sort({ createdAt: -1 }).limit(5).lean();
     const latestOrders = latestInvoicesList.map((inv: any) => ({
       id: inv._id.toString(),
       orderNumber: inv.orderNumber || inv.invoiceNumber,
@@ -374,7 +380,7 @@ export async function GET() {
       createdAt: inv.createdAt ? new Date(inv.createdAt).toISOString() : new Date().toISOString(),
     }));
 
-    const recentPaymentsList = await Payment.find({}).sort({ createdAt: -1 }).limit(5).lean();
+    const recentPaymentsList = await Payment.find({ organizationId }).sort({ createdAt: -1 }).limit(5).lean();
     const recentPayments = recentPaymentsList.map((p: any) => ({
       id: p._id.toString(),
       paymentRef: p.paymentRef,

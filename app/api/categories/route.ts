@@ -1,20 +1,16 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import Category from "@/lib/models/Category";
+import { requireTenantSession } from "@/lib/auth/apiAuth";
 
-const DEFAULT_CATEGORIES = [
-  { name: "Screen & OLED Assembly", code: "SCR", description: "Display touch assemblies for smartphones" },
-  { name: "High-Capacity Battery", code: "BAT", description: "OEM and aftermarket replacement batteries" },
-  { name: "Charging Port Flex", code: "CHG", description: "Charging ports, mic, and ribbon flex cables" },
-  { name: "Camera Module", code: "CAM", description: "Front & rear camera sensor modules" },
-  { name: "Housing & Back Glass", code: "HSG", description: "Phone rear covers, mid-frames, chassis" },
-  { name: "IC Chips & Motherboard Parts", code: "IC", description: "Micro-soldering chips and audio ICs" },
-];
-
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
-    const categories = await Category.find({}).sort({ name: 1 });
+    const categories = await Category.find({ organizationId }).sort({ name: 1 });
 
     return NextResponse.json({ success: true, data: categories });
   } catch (error: any) {
@@ -24,6 +20,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
 
@@ -33,6 +33,7 @@ export async function POST(req: Request) {
 
     const code = body.code || body.name.substring(0, 3).toUpperCase();
     const newCategory = await Category.create({
+      organizationId,
       name: body.name,
       code,
       description: body.description || "",

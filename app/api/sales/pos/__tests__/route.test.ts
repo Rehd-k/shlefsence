@@ -1,17 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const { requireTenantSession } = vi.hoisted(() => ({
+  requireTenantSession: vi.fn(),
+}));
+
 vi.mock("@/lib/db/mongodb", () => ({
   connectToDatabase: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@/lib/auth/session", () => ({
-  getSessionFromRequest: vi.fn().mockResolvedValue({
-    sub: "1",
-    name: "Cashier",
-    email: "c@test.com",
-    role: "Sales",
-    assignedLocation: "Hub",
+vi.mock("@/lib/auth/apiAuth", () => ({
+  requireTenantSession,
+  tenantFilter: (organizationId: string, extra: Record<string, unknown> = {}) => ({
+    organizationId,
+    ...extra,
   }),
+  actorName: (s: { name?: string; email?: string }) => s.name || s.email || "System",
 }));
 
 const lean = vi.fn();
@@ -47,6 +50,17 @@ import { GET, POST } from "@/app/api/sales/pos/route";
 describe("/api/sales/pos", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    requireTenantSession.mockResolvedValue({
+      session: {
+        sub: "u1",
+        email: "a@b.com",
+        name: "Admin",
+        role: "Admin",
+        assignedLocation: "Main Hub",
+        organizationId: "aaaaaaaaaaaaaaaaaaaaaaaa",
+      },
+      organizationId: "aaaaaaaaaaaaaaaaaaaaaaaa",
+    });
   });
 
   it("GET returns empty catalog without seed", async () => {

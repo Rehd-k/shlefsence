@@ -1,7 +1,9 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { OrderType, PaymentMethod } from "@/lib/types/sales";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 export interface IReceiptDocument extends Document {
+  organizationId: OrganizationId;
   receiptNumber: string;
   invoiceNumber: string;
   customerName: string;
@@ -21,7 +23,8 @@ export interface IReceiptDocument extends Document {
 
 const ReceiptSchema = new Schema<IReceiptDocument>(
   {
-    receiptNumber: { type: String, required: true, unique: true, index: true },
+    ...organizationIdField,
+    receiptNumber: { type: String, required: true, index: true },
     invoiceNumber: { type: String, required: true, index: true },
     customerName: { type: String, required: true },
     customerType: { type: String, required: true },
@@ -39,6 +42,8 @@ const ReceiptSchema = new Schema<IReceiptDocument>(
     timestamps: true,
   }
 );
+
+ReceiptSchema.index({ organizationId: 1, receiptNumber: 1 }, { unique: true });
 
 const Receipt: Model<IReceiptDocument> =
   mongoose.models.Receipt || mongoose.model<IReceiptDocument>("Receipt", ReceiptSchema);

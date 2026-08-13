@@ -10,8 +10,10 @@ import {
   IProductImage,
   IProductNote,
 } from "@/lib/types/product";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 export interface IProductDocument extends Document {
+  organizationId: OrganizationId;
   sku: string;
   name: string;
   image: string;
@@ -48,7 +50,8 @@ export interface IProductDocument extends Document {
 
 const ProductSchema = new Schema<IProductDocument>(
   {
-    sku: { type: String, required: true, unique: true, index: true },
+    ...organizationIdField,
+    sku: { type: String, required: true, index: true },
     name: { type: String, required: true, index: true },
     image: { type: String, default: "" },
     barcode: { type: String, required: true, index: true },
@@ -161,6 +164,8 @@ const ProductSchema = new Schema<IProductDocument>(
     timestamps: true,
   }
 );
+
+ProductSchema.index({ organizationId: 1, sku: 1 }, { unique: true });
 
 const Product: Model<IProductDocument> =
   mongoose.models.Product || mongoose.model<IProductDocument>("Product", ProductSchema);

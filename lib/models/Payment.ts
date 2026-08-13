@@ -1,7 +1,9 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { PaymentMethod } from "@/lib/types/sales";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 export interface IPaymentDocument extends Document {
+  organizationId: OrganizationId;
   paymentRef: string;
   invoiceId: string;
   invoiceNumber: string;
@@ -19,7 +21,8 @@ export interface IPaymentDocument extends Document {
 
 const PaymentSchema = new Schema<IPaymentDocument>(
   {
-    paymentRef: { type: String, required: true, unique: true, index: true },
+    ...organizationIdField,
+    paymentRef: { type: String, required: true, index: true },
     invoiceId: { type: String, required: true, index: true },
     invoiceNumber: { type: String, required: true, index: true },
     customerName: { type: String, required: true, index: true },
@@ -41,6 +44,8 @@ const PaymentSchema = new Schema<IPaymentDocument>(
     timestamps: true,
   }
 );
+
+PaymentSchema.index({ organizationId: 1, paymentRef: 1 }, { unique: true });
 
 const Payment: Model<IPaymentDocument> =
   mongoose.models.Payment || mongoose.model<IPaymentDocument>("Payment", PaymentSchema);

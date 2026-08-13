@@ -1,6 +1,8 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 export interface IWarehouseDocument extends Document {
+  organizationId: OrganizationId;
   code: string;
   name: string;
   type: "Main Hub" | "Regional Depot" | "Retail Branch";
@@ -17,8 +19,9 @@ export interface IWarehouseDocument extends Document {
 
 const WarehouseSchema = new Schema<IWarehouseDocument>(
   {
+    ...organizationIdField,
     code: { type: String, required: true, default: "WH-01" },
-    name: { type: String, required: true, unique: true, index: true },
+    name: { type: String, required: true, index: true },
     type: {
       type: String,
       enum: ["Main Hub", "Regional Depot", "Retail Branch"],
@@ -36,6 +39,9 @@ const WarehouseSchema = new Schema<IWarehouseDocument>(
     timestamps: true,
   }
 );
+
+WarehouseSchema.index({ organizationId: 1, name: 1 }, { unique: true });
+WarehouseSchema.index({ organizationId: 1, code: 1 }, { unique: true });
 
 const Warehouse: Model<IWarehouseDocument> =
   mongoose.models.Warehouse || mongoose.model<IWarehouseDocument>("Warehouse", WarehouseSchema);

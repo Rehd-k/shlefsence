@@ -1,6 +1,8 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 export interface IBrandDocument extends Document {
+  organizationId: OrganizationId;
   name: string;
   createdAt: Date;
   updatedAt: Date;
@@ -8,10 +10,13 @@ export interface IBrandDocument extends Document {
 
 const BrandSchema = new Schema<IBrandDocument>(
   {
-    name: { type: String, required: true, unique: true, index: true },
+    ...organizationIdField,
+    name: { type: String, required: true, index: true },
   },
   { timestamps: true }
 );
+
+BrandSchema.index({ organizationId: 1, name: 1 }, { unique: true });
 
 const Brand: Model<IBrandDocument> =
   mongoose.models.Brand || mongoose.model<IBrandDocument>("Brand", BrandSchema);

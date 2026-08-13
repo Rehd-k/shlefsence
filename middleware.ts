@@ -54,6 +54,9 @@ export async function middleware(req: NextRequest) {
   response.headers.set("x-user-id", session.sub);
   response.headers.set("x-user-role", String(session.role));
   response.headers.set("x-user-name", encodeURIComponent(session.name));
+  if (session.organizationId) {
+    response.headers.set("x-organization-id", session.organizationId);
+  }
   return response;
 }
 

@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import QualityGrade from "@/lib/models/QualityGrade";
+import { requireTenantSession } from "@/lib/auth/apiAuth";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
-    const grades = await QualityGrade.find({}).sort({ name: 1 }).lean();
-    
+    const grades = await QualityGrade.find({ organizationId }).sort({ name: 1 }).lean();
+
     const formatted = grades.map((g: any) => ({
       id: g._id.toString(),
       name: g.name,
@@ -22,6 +27,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
 
@@ -30,6 +39,7 @@ export async function POST(req: Request) {
     }
 
     const newGrade = await QualityGrade.create({
+      organizationId,
       name: body.name,
       label: body.label,
     });

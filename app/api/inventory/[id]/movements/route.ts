@@ -1,17 +1,24 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import InventoryMovement from "@/lib/models/InventoryMovement";
+import { requireTenantSession, tenantFilter } from "@/lib/auth/apiAuth";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireTenantSession(request);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     const { id } = await params;
     await connectToDatabase();
-    const movements = await InventoryMovement.find({
-      $or: [{ inventoryItemId: id }, { sku: id }],
-    })
+    const movements = await InventoryMovement.find(
+      tenantFilter(organizationId, {
+        $or: [{ inventoryItemId: id }, { sku: id }],
+      })
+    )
       .sort({ createdAt: -1 })
       .lean();
 

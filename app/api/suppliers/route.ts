@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import Supplier from "@/lib/models/Supplier";
+import { requireTenantSession } from "@/lib/auth/apiAuth";
+
 export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
 
     const { searchParams } = new URL(req.url);
@@ -10,7 +16,7 @@ export async function GET(req: Request) {
     const status = searchParams.get("status") || "";
     const industry = searchParams.get("industry") || "";
 
-    let query: any = {};
+    const query: Record<string, unknown> = { organizationId };
 
     if (search) {
       query.$or = [
@@ -32,9 +38,8 @@ export async function GET(req: Request) {
 
     const suppliers = await Supplier.find(query).sort({ createdAt: -1 }).lean();
 
-    // Calculate aggregated KPIs across all suppliers
-    const allSuppliers = await Supplier.find({}).lean();
-    
+    const allSuppliers = await Supplier.find({ organizationId }).lean();
+
     let totalPurchases = 0;
     let outstandingBalance = 0;
     let totalDeliveryDays = 0;
@@ -89,6 +94,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const raw = await req.json();
     const { parseBody } = await import("@/lib/validators/parse");
@@ -97,9 +106,8 @@ export async function POST(req: Request) {
     if ("error" in parsed) return parsed.error;
     const body = { ...parsed.data } as Record<string, unknown>;
 
-    // Generate unique code if not provided
     if (!body.code) {
-      const count = await Supplier.countDocuments();
+      const count = await Supplier.countDocuments({ organizationId });
       body.code = `SUP-${1000 + count + 1}`;
     }
 
@@ -111,7 +119,7 @@ export async function POST(req: Request) {
       body.rating = "98.0% Quality";
     }
 
-    const newSupplier = await Supplier.create(body);
+    const newSupplier = await Supplier.create({ ...body, organizationId });
     const obj = newSupplier.toObject();
 
     return NextResponse.json({

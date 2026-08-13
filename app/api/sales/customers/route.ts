@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import WholesaleCustomer from "@/lib/models/WholesaleCustomer";
+import { requireTenantSession } from "@/lib/auth/apiAuth";
+
 export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
 
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
 
-    const query: any = {};
+    const query: Record<string, unknown> = { organizationId };
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -32,10 +38,14 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
 
-    const newCustomer = await WholesaleCustomer.create(body);
+    const newCustomer = await WholesaleCustomer.create({ ...body, organizationId });
     const obj = newCustomer.toObject();
 
     return NextResponse.json({

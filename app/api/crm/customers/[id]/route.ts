@@ -4,9 +4,14 @@ import Customer from "@/lib/models/Customer";
 import Invoice from "@/lib/models/Invoice";
 import WarrantyClaim from "@/lib/models/WarrantyClaim";
 import StoreSettings from "@/lib/models/StoreSettings";
+import { requireTenantSession, tenantFilter } from "@/lib/auth/apiAuth";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const { id } = await params;
     const { parseParam } = await import("@/lib/validators/parse");
@@ -14,7 +19,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const idParsed = parseParam(customerIdSchema, id);
     if ("error" in idParsed) return idParsed.error;
 
-    const customerDoc = await Customer.findById(idParsed.data).lean();
+    const customerDoc = await Customer.findOne(
+      tenantFilter(organizationId, { _id: idParsed.data })
+    ).lean();
     if (!customerDoc) {
       return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
     }
@@ -24,13 +31,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       id: customerDoc._id.toString(),
     };
 
-    // Cross-query matching invoices and warranty claims by businessName or email
-    const invoices = await Invoice.find({
-      $or: [
-        { customerName: customer.businessName },
-        { customerEmail: customer.email },
-      ],
-    })
+    const invoices = await Invoice.find(
+      tenantFilter(organizationId, {
+        $or: [
+          { customerName: customer.businessName },
+          { customerEmail: customer.email },
+        ],
+      })
+    )
       .sort({ createdAt: -1 })
       .lean();
 
@@ -39,9 +47,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       id: inv._id.toString(),
     }));
 
-    const claims = await WarrantyClaim.find({
-      customer: { $regex: customer.businessName, $options: "i" },
-    })
+    const claims = await WarrantyClaim.find(
+      tenantFilter(organizationId, {
+        customer: { $regex: customer.businessName, $options: "i" },
+      })
+    )
       .sort({ createdAt: -1 })
       .lean();
 
@@ -66,22 +76,25 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const { id } = await params;
     const body = await req.json();
 
-    const existing = await Customer.findById(id);
+    const existing = await Customer.findOne(tenantFilter(organizationId, { _id: id }));
     if (!existing) {
       return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
     }
 
     let currencySymbol = "₦";
-    const settings = await StoreSettings.findOne({});
+    const settings = await StoreSettings.findOne({ organizationId });
     if (settings && settings.currencyDefault) {
       currencySymbol = settings.currencyDefault;
     }
 
-    // Check if wallet, debt, or credit changed to generate timeline events
     const timelineAdditions = [];
 
     if (body.walletAdjustment !== undefined && body.walletAdjustment !== 0) {
@@ -136,7 +149,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       });
     }
 
-    // Update standard fields
     if (body.businessName) existing.businessName = body.businessName;
     if (body.contactName) existing.contactName = body.contactName;
     if (body.customerType) existing.customerType = body.customerType;
@@ -167,10 +179,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const { id } = await params;
 
-    const deleted = await Customer.findByIdAndDelete(id);
+    const deleted = await Customer.findOneAndDelete(tenantFilter(organizationId, { _id: id }));
     if (!deleted) {
       return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
     }

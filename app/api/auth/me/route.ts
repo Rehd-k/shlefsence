@@ -4,6 +4,7 @@ import User from "@/lib/models/User";
 import RolePermission from "@/lib/models/RolePermission";
 import { unauthorizedResponse } from "@/lib/auth/session";
 import { getSessionFromCookies } from "@/lib/auth/getSession";
+import { defaultPermissionsForRole } from "@/lib/tenancy/defaultPermissions";
 
 export async function GET() {
   try {
@@ -18,7 +19,16 @@ export async function GET() {
       return unauthorizedResponse("User not found or inactive");
     }
 
-    const permissionsData = await RolePermission.findOne({ role: user.role }).lean();
+    const organizationId = (user.organizationId || session.organizationId)?.toString();
+    if (!organizationId) {
+      return unauthorizedResponse("Organization context missing");
+    }
+
+    const permissionsData = await RolePermission.findOne({
+      organizationId: user.organizationId || organizationId,
+      role: user.role,
+    }).lean();
+    const fallback = defaultPermissionsForRole(user.role);
 
     return NextResponse.json({
       success: true,
@@ -28,13 +38,12 @@ export async function GET() {
         email: user.email,
         role: user.role,
         assignedLocation: user.assignedLocation,
+        organizationId,
         supervisedLocations: user.supervisedLocations || [],
-        permissions: permissionsData
-          ? {
-              allowedPages: permissionsData.allowedPages || [],
-              allowAllLocations: permissionsData.allowAllLocations ?? false,
-            }
-          : undefined,
+        permissions: {
+          allowedPages: permissionsData?.allowedPages || fallback.allowedPages,
+          allowAllLocations: permissionsData?.allowAllLocations ?? fallback.allowAllLocations,
+        },
       },
     });
   } catch (error: unknown) {

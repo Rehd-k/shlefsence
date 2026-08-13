@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import Warehouse from "@/lib/models/Warehouse";
 import User from "@/lib/models/User";
+import { requireTenantSession, tenantFilter } from "@/lib/auth/apiAuth";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
 
-    const warehouses = await Warehouse.find({}).sort({ createdAt: -1 }).lean();
+    const warehouses = await Warehouse.find({ organizationId }).sort({ createdAt: -1 }).lean();
 
     const formatted = warehouses.map((wh: any) => ({
       ...wh,
@@ -22,14 +27,19 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
 
-    const newWarehouse = await Warehouse.create(body);
-    
-    // Find selected supervisor User and associate this warehouse with them
+    const newWarehouse = await Warehouse.create({ ...body, organizationId });
+
     if (body.manager) {
-      const supervisor = await User.findOne({ name: body.manager, role: "Supervisor" });
+      const supervisor = await User.findOne(
+        tenantFilter(organizationId, { name: body.manager, role: "Supervisor" })
+      );
       if (supervisor) {
         if (!supervisor.supervisedLocations) {
           supervisor.supervisedLocations = [];

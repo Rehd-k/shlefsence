@@ -1,7 +1,9 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { OrderType, InvoiceStatus, FulfillmentStatus, PaymentMethod, IInvoiceItem, IPaymentRecord } from "@/lib/types/sales";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 export interface IInvoiceDocument extends Document {
+  organizationId: OrganizationId;
   invoiceNumber: string;
   orderNumber: string;
   customerName: string;
@@ -59,7 +61,8 @@ const PaymentRecordSchema = new Schema<IPaymentRecord>({
 
 const InvoiceSchema = new Schema<IInvoiceDocument>(
   {
-    invoiceNumber: { type: String, required: true, unique: true, index: true },
+    ...organizationIdField,
+    invoiceNumber: { type: String, required: true, index: true },
     orderNumber: { type: String, required: true, index: true },
     customerName: { type: String, required: true, index: true },
     customerEmail: { type: String, required: true },
@@ -98,6 +101,8 @@ const InvoiceSchema = new Schema<IInvoiceDocument>(
     timestamps: true,
   }
 );
+
+InvoiceSchema.index({ organizationId: 1, invoiceNumber: 1 }, { unique: true });
 
 const Invoice: Model<IInvoiceDocument> =
   mongoose.models.Invoice || mongoose.model<IInvoiceDocument>("Invoice", InvoiceSchema);

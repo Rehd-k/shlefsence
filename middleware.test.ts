@@ -46,8 +46,10 @@ describe("middleware", () => {
       name: "Admin",
       role: "Admin",
       assignedLocation: "All",
+      organizationId: "aaaaaaaaaaaaaaaaaaaaaaaa",
     } as never);
     const res = await middleware(makeReq("/api/products", "tok"));
     expect(res.status).toBe(200);
+    expect(res.headers.get("x-organization-id")).toBe("aaaaaaaaaaaaaaaaaaaaaaaa");
   });
 });

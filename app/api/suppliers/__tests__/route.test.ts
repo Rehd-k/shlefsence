@@ -1,16 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { lean, find } = vi.hoisted(() => {
+const { lean, find, requireTenantSession } = vi.hoisted(() => {
   const lean = vi.fn().mockResolvedValue([]);
   const find = vi.fn(() => ({
     sort: () => ({ lean }),
     lean,
   }));
-  return { lean, find };
+  const requireTenantSession = vi.fn();
+  return { lean, find, requireTenantSession };
 });
 
 vi.mock("@/lib/db/mongodb", () => ({
   connectToDatabase: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/lib/auth/apiAuth", () => ({
+  requireTenantSession,
+  tenantFilter: (organizationId: string, extra: Record<string, unknown> = {}) => ({
+    organizationId,
+    ...extra,
+  }),
+  actorName: (s: { name?: string; email?: string }) => s.name || s.email || "System",
 }));
 
 vi.mock("@/lib/models/Supplier", () => ({
@@ -23,6 +33,17 @@ describe("/api/suppliers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     lean.mockResolvedValue([]);
+    requireTenantSession.mockResolvedValue({
+      session: {
+        sub: "u1",
+        email: "a@b.com",
+        name: "Admin",
+        role: "Admin",
+        assignedLocation: "Main Hub",
+        organizationId: "aaaaaaaaaaaaaaaaaaaaaaaa",
+      },
+      organizationId: "aaaaaaaaaaaaaaaaaaaaaaaa",
+    });
   });
 
   it("GET returns empty list with zero KPIs", async () => {

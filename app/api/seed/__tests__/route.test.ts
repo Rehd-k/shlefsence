@@ -4,6 +4,13 @@ vi.mock("@/lib/db/mongodb", () => ({
   connectToDatabase: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@/lib/tenancy/migrateToDefaultOrg", () => ({
+  ensureDefaultOrganizationMigration: vi.fn().mockResolvedValue({
+    organizationId: "aaaaaaaaaaaaaaaaaaaaaaaa",
+    backfilled: {},
+  }),
+}));
+
 import { GET, POST } from "@/app/api/seed/route";
 
 describe("/api/seed", () => {

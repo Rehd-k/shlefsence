@@ -2,9 +2,14 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import Customer from "@/lib/models/Customer";
 import { CommunicationType } from "@/lib/types/crm";
+import { requireTenantSession, tenantFilter } from "@/lib/auth/apiAuth";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const { id } = await params;
     const body = await req.json();
@@ -18,7 +23,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       );
     }
 
-    const customer = await Customer.findById(id);
+    const customer = await Customer.findOne(tenantFilter(organizationId, { _id: id }));
     if (!customer) {
       return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
     }

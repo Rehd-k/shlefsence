@@ -1,57 +1,47 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import RolePermission from "@/lib/models/RolePermission";
-
-const DEFAULT_PERMISSIONS: Record<string, { allowedPages: string[]; allowAllLocations: boolean }> = {
-  Admin: {
-    allowedPages: ["dashboard", "crm", "products", "inventory", "sales", "purchase-orders", "suppliers", "warehouses", "warranty", "settings"],
-    allowAllLocations: true,
-  },
-  Manager: {
-    allowedPages: ["dashboard", "crm", "products", "inventory", "sales", "purchase-orders", "suppliers", "warehouses", "warranty"],
-    allowAllLocations: true,
-  },
-  Supervisor: {
-    allowedPages: ["dashboard", "products", "inventory", "sales", "purchase-orders", "warehouses", "warranty"],
-    allowAllLocations: false,
-  },
-  Sales: {
-    allowedPages: ["sales"],
-    allowAllLocations: false,
-  },
-};
+import { requireTenantSession } from "@/lib/auth/apiAuth";
+import { DEFAULT_ROLE_PERMISSIONS } from "@/lib/tenancy/defaultPermissions";
 
 export async function GET(request: Request) {
   try {
+    const auth = await requireTenantSession(request);
+    if ("error" in auth) return auth.error;
+
     await connectToDatabase();
     const { searchParams } = new URL(request.url);
     const role = searchParams.get("role");
+    const { organizationId } = auth;
 
     if (!role) {
-      // If no role is requested, return all permissions docs (for admin settings page)
-      const allPerms = await RolePermission.find({}).lean();
+      const allPerms = await RolePermission.find({ organizationId }).lean();
       return NextResponse.json({ success: true, data: allPerms });
     }
 
-    let perms = await RolePermission.findOne({ role }).lean();
+    let perms = await RolePermission.findOne({ organizationId, role }).lean();
 
-    // Fallback to hardcoded defaults if DB doesn't have it yet
-    if (!perms && DEFAULT_PERMISSIONS[role]) {
+    if (!perms && DEFAULT_ROLE_PERMISSIONS[role]) {
       perms = {
+        organizationId,
         role,
-        allowedPages: DEFAULT_PERMISSIONS[role].allowedPages,
-        allowAllLocations: DEFAULT_PERMISSIONS[role].allowAllLocations,
-      } as any;
+        allowedPages: DEFAULT_ROLE_PERMISSIONS[role].allowedPages,
+        allowAllLocations: DEFAULT_ROLE_PERMISSIONS[role].allowAllLocations,
+      } as typeof perms;
     }
 
     return NextResponse.json({ success: true, data: perms });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to load permissions";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireTenantSession(request);
+    if ("error" in auth) return auth.error;
+
     await connectToDatabase();
     const body = await request.json();
     const { role, allowedPages, allowAllLocations } = body;
@@ -61,13 +51,19 @@ export async function POST(request: Request) {
     }
 
     const updated = await RolePermission.findOneAndUpdate(
-      { role },
-      { allowedPages, allowAllLocations },
+      { organizationId: auth.organizationId, role },
+      {
+        organizationId: auth.organizationId,
+        role,
+        allowedPages,
+        allowAllLocations,
+      },
       { new: true, upsert: true }
     );
 
     return NextResponse.json({ success: true, data: updated });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to save permissions";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

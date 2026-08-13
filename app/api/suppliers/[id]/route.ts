@@ -3,16 +3,21 @@ import { connectToDatabase } from "@/lib/db/mongodb";
 import Supplier from "@/lib/models/Supplier";
 import PurchaseOrder from "@/lib/models/PurchaseOrder";
 import WarrantyClaim from "@/lib/models/WarrantyClaim";
+import { requireTenantSession, tenantFilter } from "@/lib/auth/apiAuth";
 
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const { id } = await params;
 
-    const supplier = await Supplier.findById(id).lean();
+    const supplier = await Supplier.findOne(tenantFilter(organizationId, { _id: id })).lean();
 
     if (!supplier) {
       return NextResponse.json(
@@ -21,14 +26,15 @@ export async function GET(
       );
     }
 
-    // Fetch related Purchase Orders and Warranty Claims for this supplier
-    const pos = await PurchaseOrder.find({
-      supplier: { $regex: supplier.name, $options: "i" },
-    })
+    const pos = await PurchaseOrder.find(
+      tenantFilter(organizationId, {
+        supplier: { $regex: supplier.name, $options: "i" },
+      })
+    )
       .sort({ createdAt: -1 })
       .lean();
 
-    const warrantyClaims = await WarrantyClaim.find({})
+    const warrantyClaims = await WarrantyClaim.find({ organizationId })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -57,11 +63,15 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const { id } = await params;
     const body = await req.json();
 
-    const existing = await Supplier.findById(id);
+    const existing = await Supplier.findOne(tenantFilter(organizationId, { _id: id }));
 
     if (!existing) {
       return NextResponse.json(
@@ -70,7 +80,6 @@ export async function PUT(
       );
     }
 
-    // Check for special action payloads like addContact, logCommunication, attachDocument
     if (body.action === "ADD_COMMUNICATION") {
       const newComm = {
         id: `comm-${Date.now()}`,
@@ -116,8 +125,12 @@ export async function PUT(
       return NextResponse.json({ success: true, data: existing });
     }
 
-    // Standard document update
-    const updated = await Supplier.findByIdAndUpdate(id, { $set: body }, { new: true }).lean();
+    const { organizationId: _ignore, ...safeBody } = body;
+    const updated = await Supplier.findOneAndUpdate(
+      tenantFilter(organizationId, { _id: id }),
+      { $set: safeBody },
+      { new: true }
+    ).lean();
 
     return NextResponse.json({
       success: true,
@@ -134,10 +147,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const { id } = await params;
 
-    const deleted = await Supplier.findByIdAndDelete(id);
+    const deleted = await Supplier.findOneAndDelete(tenantFilter(organizationId, { _id: id }));
 
     if (!deleted) {
       return NextResponse.json(

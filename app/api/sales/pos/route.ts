@@ -3,17 +3,21 @@ import { connectToDatabase } from "@/lib/db/mongodb";
 import Product from "@/lib/models/Product";
 import Receipt from "@/lib/models/Receipt";
 import StoreSettings from "@/lib/models/StoreSettings";
-import { getSessionFromRequest } from "@/lib/auth/session";
+import { requireTenantSession, actorName } from "@/lib/auth/apiAuth";
 import { posSaleSchema } from "@/lib/validators/sales";
 
 export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
 
     const { searchParams } = new URL(req.url);
     const warehouse = searchParams.get("warehouse") || "";
 
-    const query: Record<string, string> = {};
+    const query: Record<string, unknown> = { organizationId };
     if (warehouse && warehouse !== "All Locations" && warehouse !== "All Warehouses") {
       query.warehouse = warehouse;
     }
@@ -45,8 +49,11 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId, session } = auth;
+
     await connectToDatabase();
-    const session = await getSessionFromRequest(req);
     const body = await req.json();
     const parsed = posSaleSchema.safeParse(body);
     if (!parsed.success) {
@@ -56,7 +63,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const settings = await StoreSettings.findOne().lean();
+    const settings = await StoreSettings.findOne({ organizationId }).lean();
     const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
     const receiptNumber = `RCP-${Date.now().toString().slice(-6)}`;
     const nowStr = new Date().toISOString();
@@ -81,6 +88,7 @@ export async function POST(req: Request) {
         : "Cash";
 
     const newReceipt = await Receipt.create({
+      organizationId,
       receiptNumber,
       invoiceNumber,
       customerName: data.customerName || "Walk-in Retail Customer",
@@ -88,7 +96,7 @@ export async function POST(req: Request) {
       itemsCount: data.items?.length || 0,
       totalAmount: data.totalAmount || 0,
       paymentMethod,
-      cashierName: data.cashierName || session?.name || "Cashier",
+      cashierName: data.cashierName || actorName(session),
       timestamp: nowStr,
       itemsSummary: (data.items || [])
         .map((i) => `${i.quantity}x ${i.product?.name || "Item"}`)

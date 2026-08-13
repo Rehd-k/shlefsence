@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { assertSeedAuthorized } from "@/lib/auth/seedGuard";
+import { ensureDefaultOrganizationMigration } from "@/lib/tenancy/migrateToDefaultOrg";
 import bcrypt from "bcrypt";
 import InventoryItem from "@/lib/models/InventoryItem";
 import InventoryMovement from "@/lib/models/InventoryMovement";
@@ -67,16 +68,21 @@ export async function POST(req: Request) {
 
   try {
     await connectToDatabase();
+    const { organizationId } = await ensureDefaultOrganizationMigration();
 
     const { searchParams } = new URL(req.url);
     const force = searchParams.get("force") === "true";
+    const orgFilter = { organizationId };
+    const wipe = force ? {} : orgFilter;
 
     let stats: Record<string, number> = {};
 
     // 1. Inventory Items
-    if (force || (await InventoryItem.countDocuments()) === 0) {
-      await InventoryItem.deleteMany({});
-      const items = await InventoryItem.insertMany(INITIAL_INVENTORY_ITEMS);
+    if (force || (await InventoryItem.countDocuments(orgFilter)) === 0) {
+      await InventoryItem.deleteMany(wipe);
+      const items = await InventoryItem.insertMany(
+        INITIAL_INVENTORY_ITEMS.map((item) => ({ ...item, organizationId }))
+      );
       stats.inventoryItems = items.length;
 
       const skuToIdMap: Record<string, any> = {};
@@ -85,10 +91,11 @@ export async function POST(req: Request) {
       });
 
       // 2. Inventory Movements
-      await InventoryMovement.deleteMany({});
+      await InventoryMovement.deleteMany(wipe);
       const allMovements = Object.values(INITIAL_MOVEMENTS).flat();
       const mappedMovements = allMovements.map((mov) => ({
         ...mov,
+        organizationId,
         inventoryItemId: skuToIdMap[mov.sku] || items[0]._id,
       }));
 
@@ -97,93 +104,101 @@ export async function POST(req: Request) {
     }
 
     // 3. Products
-    if (force || (await Product.countDocuments()) === 0) {
-      await Product.deleteMany({});
+    if (force || (await Product.countDocuments(orgFilter)) === 0) {
+      await Product.deleteMany(wipe);
       const products = await Product.insertMany(
         INITIAL_PRODUCTS.map((p) => {
           const { id, ...rest } = p;
-          return rest;
+          return { ...rest, organizationId };
         })
       );
       stats.products = products.length;
     }
 
     // 4. Invoices
-    if (force || (await Invoice.countDocuments()) === 0) {
-      await Invoice.deleteMany({});
+    if (force || (await Invoice.countDocuments(orgFilter)) === 0) {
+      await Invoice.deleteMany(wipe);
       const invoices = await Invoice.insertMany(
         SEED_INVOICES.map((inv) => {
           const { id, ...rest } = inv;
-          return rest;
+          return { ...rest, organizationId };
         })
       );
       stats.invoices = invoices.length;
     }
 
     // 5. Payments
-    if (force || (await Payment.countDocuments()) === 0) {
-      await Payment.deleteMany({});
+    if (force || (await Payment.countDocuments(orgFilter)) === 0) {
+      await Payment.deleteMany(wipe);
       const payments = await Payment.insertMany(
         SEED_PAYMENTS.map((pmt) => {
           const { id, ...rest } = pmt;
-          return rest;
+          return { ...rest, organizationId };
         })
       );
       stats.payments = payments.length;
     }
 
     // 6. Receipts
-    if (force || (await Receipt.countDocuments()) === 0) {
-      await Receipt.deleteMany({});
+    if (force || (await Receipt.countDocuments(orgFilter)) === 0) {
+      await Receipt.deleteMany(wipe);
       const receipts = await Receipt.insertMany(
         SEED_RECEIPTS.map((rcp) => {
           const { id, ...rest } = rcp;
-          return rest;
+          return { ...rest, organizationId };
         })
       );
       stats.receipts = receipts.length;
     }
 
     // 7. Wholesale Customers
-    if (force || (await WholesaleCustomer.countDocuments()) === 0) {
-      await WholesaleCustomer.deleteMany({});
+    if (force || (await WholesaleCustomer.countDocuments(orgFilter)) === 0) {
+      await WholesaleCustomer.deleteMany(wipe);
       const customers = await WholesaleCustomer.insertMany(
         SEED_WHOLESALE_CUSTOMERS.map((cust) => {
           const { id, ...rest } = cust;
-          return rest;
+          return { ...rest, organizationId };
         })
       );
       stats.wholesaleCustomers = customers.length;
     }
 
     // 8. Purchase Orders
-    if (force || (await PurchaseOrder.countDocuments()) === 0) {
-      await PurchaseOrder.deleteMany({});
+    if (force || (await PurchaseOrder.countDocuments(orgFilter)) === 0) {
+      await PurchaseOrder.deleteMany(wipe);
       const pos = await PurchaseOrder.insertMany(
         INITIAL_PURCHASE_ORDERS.map((po) => {
           const { id, ...rest } = po;
-          return rest;
+          return { ...rest, organizationId };
         })
       );
       stats.purchaseOrders = pos.length;
     }
 
     // 9. Suppliers
-    if (force || (await Supplier.countDocuments()) === 0) {
-      await Supplier.deleteMany({});
-      const suppliers = await Supplier.insertMany(INITIAL_SUPPLIERS_SEED);
+    if (force || (await Supplier.countDocuments(orgFilter)) === 0) {
+      await Supplier.deleteMany(wipe);
+      const suppliers = await Supplier.insertMany(
+        INITIAL_SUPPLIERS_SEED.map((s) => ({ ...s, organizationId }))
+      );
       stats.suppliers = suppliers.length;
     }
 
     // 10. Warehouses & Full Hierarchy (Zones, Racks, Shelves, Bins)
-    if (force || (await Warehouse.countDocuments()) === 0 || (await WarehouseBin.countDocuments()) === 0) {
-      await Warehouse.deleteMany({});
-      await WarehouseZone.deleteMany({});
-      await WarehouseRack.deleteMany({});
-      await WarehouseShelf.deleteMany({});
-      await WarehouseBin.deleteMany({});
+    if (
+      force ||
+      (await Warehouse.countDocuments(orgFilter)) === 0 ||
+      (await WarehouseBin.countDocuments(orgFilter)) === 0
+    ) {
+      await Warehouse.deleteMany(wipe);
+      await WarehouseZone.deleteMany(wipe);
+      await WarehouseRack.deleteMany(wipe);
+      await WarehouseShelf.deleteMany(wipe);
+      await WarehouseBin.deleteMany(wipe);
 
-      const insertedWarehouses: any[] = await Warehouse.insertMany(INITIAL_WAREHOUSE_FACILITIES);
+      const insertedWarehouses: any[] = await Warehouse.insertMany(
+        INITIAL_WAREHOUSE_FACILITIES.map((w) => ({ ...w, organizationId }))
+      );
       stats.warehouses = insertedWarehouses.length;
 
       let createdZonesCount = 0;
@@ -195,6 +210,7 @@ export async function POST(req: Request) {
       if (primaryWh) {
         for (const zConfig of INITIAL_ZONES_CONFIG) {
           const zoneDoc = await WarehouseZone.create({
+            organizationId,
             warehouseId: primaryWh._id,
             code: zConfig.code,
             name: zConfig.name,
@@ -207,10 +223,10 @@ export async function POST(req: Request) {
           });
           createdZonesCount++;
 
-          // Create 2 Racks per zone
           for (let r = 1; r <= 2; r++) {
             const rackCode = `${zConfig.code}-R0${r}`;
             const rackDoc = await WarehouseRack.create({
+              organizationId,
               zoneId: zoneDoc._id,
               warehouseId: primaryWh._id,
               code: rackCode,
@@ -219,10 +235,10 @@ export async function POST(req: Request) {
             });
             createdRacksCount++;
 
-            // Create 3 Shelves per rack
             for (let s = 1; s <= 3; s++) {
               const shelfCode = `${rackCode}-S${s}`;
               const shelfDoc = await WarehouseShelf.create({
+                organizationId,
                 rackId: rackDoc._id,
                 zoneId: zoneDoc._id,
                 warehouseId: primaryWh._id,
@@ -232,7 +248,6 @@ export async function POST(req: Request) {
               });
               createdShelvesCount++;
 
-              // Create 4 Bins per shelf
               for (let b = 1; b <= 4; b++) {
                 const binCode = `${shelfCode}-B0${b}`;
                 const randomSku = SAMPLE_SKUS[(createdBinsCount + b) % SAMPLE_SKUS.length];
@@ -240,6 +255,7 @@ export async function POST(req: Request) {
                 const status = currentCount > 130 ? "Full" : "Available";
 
                 await WarehouseBin.create({
+                  organizationId,
                   shelfId: shelfDoc._id,
                   rackId: rackDoc._id,
                   zoneId: zoneDoc._id,
@@ -266,32 +282,52 @@ export async function POST(req: Request) {
       stats.warehouseBins = createdBinsCount;
     }
 
-    // 11. Warehouse Operations (Receiving, Picking, Packing, Cycle Count, Transfers)
-    if (force || (await WarehouseReceiving.countDocuments()) === 0) {
-      await WarehouseReceiving.deleteMany({});
-      await WarehousePicking.deleteMany({});
-      await WarehousePacking.deleteMany({});
-      await WarehouseCycleCount.deleteMany({});
-      await WarehouseTransfer.deleteMany({});
+    // 11. Warehouse Operations
+    if (force || (await WarehouseReceiving.countDocuments(orgFilter)) === 0) {
+      await WarehouseReceiving.deleteMany(wipe);
+      await WarehousePicking.deleteMany(wipe);
+      await WarehousePacking.deleteMany(wipe);
+      await WarehouseCycleCount.deleteMany(wipe);
+      await WarehouseTransfer.deleteMany(wipe);
 
-      const primaryWh: any = (await Warehouse.findOne({ code: "WH-NY01" })) || (await Warehouse.findOne({}));
-      const secondaryWh: any = (await Warehouse.findOne({ code: "BR-BK101" })) || primaryWh;
+      const primaryWh: any =
+        (await Warehouse.findOne({ organizationId, code: "WH-NY01" })) ||
+        (await Warehouse.findOne(orgFilter));
+      const secondaryWh: any =
+        (await Warehouse.findOne({ organizationId, code: "BR-BK101" })) || primaryWh;
 
       if (primaryWh) {
-        const mappedReceiving = INITIAL_RECEIVING_ORDERS.map((rec) => ({ ...rec, warehouseId: primaryWh._id }));
+        const mappedReceiving = INITIAL_RECEIVING_ORDERS.map((rec) => ({
+          ...rec,
+          organizationId,
+          warehouseId: primaryWh._id,
+        }));
         await WarehouseReceiving.insertMany(mappedReceiving);
 
-        const mappedPicking = INITIAL_PICKING_TICKETS.map((pick) => ({ ...pick, warehouseId: primaryWh._id }));
+        const mappedPicking = INITIAL_PICKING_TICKETS.map((pick) => ({
+          ...pick,
+          organizationId,
+          warehouseId: primaryWh._id,
+        }));
         await WarehousePicking.insertMany(mappedPicking);
 
-        const mappedPacking = INITIAL_PACKING_ORDERS.map((pack) => ({ ...pack, warehouseId: primaryWh._id }));
+        const mappedPacking = INITIAL_PACKING_ORDERS.map((pack) => ({
+          ...pack,
+          organizationId,
+          warehouseId: primaryWh._id,
+        }));
         await WarehousePacking.insertMany(mappedPacking as any);
 
-        const mappedCycleCounts = INITIAL_CYCLE_COUNTS.map((cc) => ({ ...cc, warehouseId: primaryWh._id }));
+        const mappedCycleCounts = INITIAL_CYCLE_COUNTS.map((cc) => ({
+          ...cc,
+          organizationId,
+          warehouseId: primaryWh._id,
+        }));
         await WarehouseCycleCount.insertMany(mappedCycleCounts as any);
 
         const mappedTransfers = INITIAL_TRANSFERS.map((trf) => ({
           ...trf,
+          organizationId,
           sourceWarehouseId: primaryWh._id,
           targetWarehouseId: secondaryWh ? secondaryWh._id : primaryWh._id,
         }));
@@ -302,44 +338,50 @@ export async function POST(req: Request) {
     }
 
     // 12. Warranty Claims
-    if (force || (await WarrantyClaim.countDocuments()) === 0) {
-      await WarrantyClaim.deleteMany({});
-      const claims = await WarrantyClaim.insertMany(INITIAL_WARRANTY_CLAIMS);
+    if (force || (await WarrantyClaim.countDocuments(orgFilter)) === 0) {
+      await WarrantyClaim.deleteMany(wipe);
+      const claims = await WarrantyClaim.insertMany(
+        INITIAL_WARRANTY_CLAIMS.map((c) => ({ ...c, organizationId }))
+      );
       stats.warrantyClaims = claims.length;
     }
 
     // 13. CRM Customers
-    if (force || (await Customer.countDocuments()) === 0) {
-      await Customer.deleteMany({});
+    if (force || (await Customer.countDocuments(orgFilter)) === 0) {
+      await Customer.deleteMany(wipe);
       const crmCustomers = await Customer.insertMany(
         INITIAL_CRM_CUSTOMERS.map((cust) => {
           const { id, ...rest } = cust;
-          return rest;
+          return { ...rest, organizationId };
         })
       );
       stats.crmCustomers = crmCustomers.length;
     }
 
     // 14. Role Permissions
-    if (force || (await RolePermission.countDocuments()) === 0) {
-      await RolePermission.deleteMany({});
+    if (force || (await RolePermission.countDocuments(orgFilter)) === 0) {
+      await RolePermission.deleteMany(wipe);
       const defaultPermissions = [
         {
+          organizationId,
           role: "Admin",
           allowedPages: ["dashboard", "crm", "products", "inventory", "sales", "purchase-orders", "suppliers", "warehouses", "warranty", "settings"],
           allowAllLocations: true,
         },
         {
+          organizationId,
           role: "Manager",
           allowedPages: ["dashboard", "crm", "products", "inventory", "sales", "purchase-orders", "suppliers", "warehouses", "warranty"],
           allowAllLocations: true,
         },
         {
+          organizationId,
           role: "Supervisor",
           allowedPages: ["dashboard", "products", "inventory", "sales", "purchase-orders", "warehouses", "warranty"],
           allowAllLocations: false,
         },
         {
+          organizationId,
           role: "Sales",
           allowedPages: ["sales"],
           allowAllLocations: false,
@@ -350,7 +392,7 @@ export async function POST(req: Request) {
     }
 
     // 15. Default Users
-    if (force || (await User.countDocuments()) === 0) {
+    if (force || (await User.countDocuments(orgFilter)) === 0) {
       const defaultUsers = [
         {
           name: "System Admin",
@@ -385,18 +427,19 @@ export async function POST(req: Request) {
           status: "Active" as const,
         },
       ];
-      await User.deleteMany({});
+      await User.deleteMany(wipe);
       for (const u of defaultUsers) {
         const hashedPassword = await bcrypt.hash(u.password, 10);
-        await User.create({ ...u, password: hashedPassword });
+        await User.create({ ...u, password: hashedPassword, organizationId });
       }
       stats.users = defaultUsers.length;
     }
 
     // 16. Default Store Settings
-    if (force || (await StoreSettings.countDocuments()) === 0) {
-      await StoreSettings.deleteMany({});
+    if (force || (await StoreSettings.countDocuments(orgFilter)) === 0) {
+      await StoreSettings.deleteMany(wipe);
       await StoreSettings.create({
+        organizationId,
         businessName: "ShelfSense Lagos",
         businessPhone: "+234 (1) 555-0192",
         businessAddress: "14 Logistics Way, Ikeja, Lagos",
@@ -406,28 +449,28 @@ export async function POST(req: Request) {
     }
 
     // 17. Default Brands
-    if (force || (await Brand.countDocuments()) === 0) {
-      await Brand.deleteMany({});
+    if (force || (await Brand.countDocuments(orgFilter)) === 0) {
+      await Brand.deleteMany(wipe);
       const defaultBrands = [
-        { name: "Apple" },
-        { name: "Samsung" },
-        { name: "Google" },
-        { name: "Xiaomi" },
-        { name: "Infinix" },
-        { name: "Tecno" },
+        { name: "Apple", organizationId },
+        { name: "Samsung", organizationId },
+        { name: "Google", organizationId },
+        { name: "Xiaomi", organizationId },
+        { name: "Infinix", organizationId },
+        { name: "Tecno", organizationId },
       ];
       await Brand.insertMany(defaultBrands);
       stats.brands = defaultBrands.length;
     }
 
     // 18. Default Quality Grades
-    if (force || (await QualityGrade.countDocuments()) === 0) {
-      await QualityGrade.deleteMany({});
+    if (force || (await QualityGrade.countDocuments(orgFilter)) === 0) {
+      await QualityGrade.deleteMany(wipe);
       const defaultGrades = [
-        { name: "OEM_ORIGINAL", label: "OEM Original" },
-        { name: "SERVICE_PACK", label: "Service Pack" },
-        { name: "REFURBISHED_A", label: "Refurbished Grade A" },
-        { name: "PREMIUM_AFTERMARKET", label: "Premium Aftermarket" },
+        { name: "OEM_ORIGINAL", label: "OEM Original", organizationId },
+        { name: "SERVICE_PACK", label: "Service Pack", organizationId },
+        { name: "REFURBISHED_A", label: "Refurbished Grade A", organizationId },
+        { name: "PREMIUM_AFTERMARKET", label: "Premium Aftermarket", organizationId },
       ];
       await QualityGrade.insertMany(defaultGrades);
       stats.qualityGrades = defaultGrades.length;

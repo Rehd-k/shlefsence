@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "reset-db": "npx tsx scripts/reset-db.ts",
+    "migrate:tenancy": "npx tsx scripts/migrate-tenancy.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ci": "vitest run --reporter=dot"

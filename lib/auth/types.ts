@@ -6,6 +6,7 @@ export interface UserSession {
   email: string;
   role: UserRole;
   assignedLocation: string;
+  organizationId: string;
   supervisedLocations?: string[];
   permissions?: {
     allowedPages: string[];

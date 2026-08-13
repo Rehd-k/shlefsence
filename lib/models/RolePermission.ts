@@ -1,21 +1,26 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 export interface IRolePermissionDocument extends Document {
-  role: string; // "Manager" | "Supervisor" | "Sales" (or "Admin", though Admin has full access by default)
-  allowedPages: string[]; // e.g. ["dashboard", "crm", "products", "inventory", "sales", "purchase-orders", "suppliers", "warehouses", "warranty", "settings"]
-  allowAllLocations: boolean; // default false for Supervisor & Sales
+  organizationId: OrganizationId;
+  role: string;
+  allowedPages: string[];
+  allowAllLocations: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const RolePermissionSchema = new Schema<IRolePermissionDocument>(
   {
-    role: { type: String, required: true, unique: true, index: true },
+    ...organizationIdField,
+    role: { type: String, required: true, index: true },
     allowedPages: { type: [String], default: [] },
     allowAllLocations: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+RolePermissionSchema.index({ organizationId: 1, role: 1 }, { unique: true });
 
 const RolePermission: Model<IRolePermissionDocument> =
   mongoose.models.RolePermission ||

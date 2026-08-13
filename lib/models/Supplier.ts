@@ -1,6 +1,8 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 export interface ISupplierDocument extends Document {
+  organizationId: OrganizationId;
   code: string;
   name: string;
   companyName: string;
@@ -82,8 +84,9 @@ export interface ISupplierDocument extends Document {
 
 const SupplierSchema = new Schema<ISupplierDocument>(
   {
-    code: { type: String, required: true, unique: true, index: true },
-    name: { type: String, required: true, unique: true, index: true },
+    ...organizationIdField,
+    code: { type: String, required: true, index: true },
+    name: { type: String, required: true, index: true },
     companyName: { type: String, required: true, index: true },
     taxId: { type: String, required: true, default: "N/A" },
     industry: { type: String, required: true, default: "Electronics & Spare Parts" },
@@ -155,6 +158,9 @@ const SupplierSchema = new Schema<ISupplierDocument>(
     timestamps: true,
   }
 );
+
+SupplierSchema.index({ organizationId: 1, code: 1 }, { unique: true });
+SupplierSchema.index({ organizationId: 1, name: 1 }, { unique: true });
 
 if (mongoose.models.Supplier) {
   delete (mongoose.models as any).Supplier;

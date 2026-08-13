@@ -11,6 +11,7 @@ export interface SessionPayload extends JWTPayload {
   name: string;
   role: UserRole;
   assignedLocation: string;
+  organizationId: string;
 }
 
 function getSecretKey(): Uint8Array {
@@ -30,12 +31,14 @@ export async function createSessionToken(payload: {
   name: string;
   role: UserRole;
   assignedLocation: string;
+  organizationId: string;
 }): Promise<string> {
   return new SignJWT({
     email: payload.email,
     name: payload.name,
     role: payload.role,
     assignedLocation: payload.assignedLocation,
+    organizationId: payload.organizationId,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.id)
@@ -47,7 +50,12 @@ export async function createSessionToken(payload: {
 export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
-    if (!payload.sub || typeof payload.email !== "string" || typeof payload.role !== "string") {
+    if (
+      !payload.sub ||
+      typeof payload.email !== "string" ||
+      typeof payload.role !== "string" ||
+      typeof payload.organizationId !== "string"
+    ) {
       return null;
     }
     return payload as SessionPayload;

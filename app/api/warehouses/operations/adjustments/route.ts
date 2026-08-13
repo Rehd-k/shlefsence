@@ -3,9 +3,14 @@ import { connectToDatabase } from "@/lib/db/mongodb";
 import { WarehouseBin } from "@/lib/models/WarehouseLocation";
 import InventoryItem from "@/lib/models/InventoryItem";
 import InventoryMovement from "@/lib/models/InventoryMovement";
+import { requireTenantSession, tenantFilter } from "@/lib/auth/apiAuth";
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
     const { binCode, sku, quantityChange, reason, performedBy } = body;
@@ -16,8 +21,7 @@ export async function POST(req: Request) {
 
     const qtyNum = Number(quantityChange);
 
-    // 1. Update WarehouseBin
-    const bin = await WarehouseBin.findOne({ binCode });
+    const bin = await WarehouseBin.findOne(tenantFilter(organizationId, { binCode }));
     if (!bin) {
       return NextResponse.json({ success: false, error: "Bin not found" }, { status: 404 });
     }
@@ -33,8 +37,7 @@ export async function POST(req: Request) {
     else if (bin.currentCount < bin.maxCapacity && bin.status === "Full") bin.status = "Available";
     await bin.save();
 
-    // 2. Update InventoryItem & Log InventoryMovement
-    let invItem = await InventoryItem.findOne({ sku });
+    let invItem = await InventoryItem.findOne(tenantFilter(organizationId, { sku }));
     let previousQuantity = 0;
     let newQuantity = 0;
 
@@ -45,6 +48,7 @@ export async function POST(req: Request) {
       await invItem.save();
 
       await InventoryMovement.create({
+        organizationId,
         inventoryItemId: invItem._id,
         sku: invItem.sku,
         productName: invItem.product,

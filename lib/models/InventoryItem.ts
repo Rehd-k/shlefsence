@@ -1,7 +1,9 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { StockStatus, QualityGrade } from "@/lib/types/inventory";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 export interface IInventoryItemDocument extends Document {
+  organizationId: OrganizationId;
   sku: string;
   product: string;
   brand: string;
@@ -26,7 +28,8 @@ export interface IInventoryItemDocument extends Document {
 
 const InventoryItemSchema = new Schema<IInventoryItemDocument>(
   {
-    sku: { type: String, required: true, unique: true, index: true },
+    ...organizationIdField,
+    sku: { type: String, required: true, index: true },
     product: { type: String, required: true, index: true },
     brand: { type: String, required: true, index: true },
     phoneModel: { type: String, required: true, index: true },
@@ -61,12 +64,12 @@ const InventoryItemSchema = new Schema<IInventoryItemDocument>(
   }
 );
 
-// Virtual for available quantity
+InventoryItemSchema.index({ organizationId: 1, sku: 1 }, { unique: true });
+
 InventoryItemSchema.virtual("available").get(function (this: IInventoryItemDocument) {
   return Math.max(0, (this.quantity || 0) - (this.reserved || 0));
 });
 
-// Pre-save hook to calculate status based on quantity and reorderPoint
 InventoryItemSchema.pre("save", function (this: IInventoryItemDocument) {
   const avail = (this.quantity || 0) - (this.reserved || 0);
   if (this.quantity === 0) {
@@ -79,6 +82,7 @@ InventoryItemSchema.pre("save", function (this: IInventoryItemDocument) {
 });
 
 const InventoryItem: Model<IInventoryItemDocument> =
-  mongoose.models.InventoryItem || mongoose.model<IInventoryItemDocument>("InventoryItem", InventoryItemSchema);
+  mongoose.models.InventoryItem ||
+  mongoose.model<IInventoryItemDocument>("InventoryItem", InventoryItemSchema);
 
 export default InventoryItem;

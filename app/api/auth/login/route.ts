@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import User from "@/lib/models/User";
 import RolePermission from "@/lib/models/RolePermission";
+import Organization from "@/lib/models/Organization";
 import bcrypt from "bcrypt";
 import { createSessionToken, setSessionCookie } from "@/lib/auth/session";
 import { loginSchema } from "@/lib/validators/auth";
+import { ensureDefaultOrganizationMigration } from "@/lib/tenancy/migrateToDefaultOrg";
+import { defaultPermissionsForRole } from "@/lib/tenancy/defaultPermissions";
+import { createOrganizationWithDefaults } from "@/lib/tenancy/bootstrapOrganization";
 
 interface SeedUser {
   name: string;
@@ -51,67 +55,24 @@ const DEFAULT_USERS: SeedUser[] = [
 ];
 
 async function seedDefaultUsers() {
-  // Never auto-seed demo users in production
   if (process.env.NODE_ENV === "production") return;
 
   const count = await User.countDocuments();
-  if (count === 0) {
-    for (const u of DEFAULT_USERS) {
-      const hashedPassword = await bcrypt.hash(u.password, 10);
-      await User.create({ ...u, password: hashedPassword });
-    }
+  if (count > 0) {
+    await ensureDefaultOrganizationMigration();
+    return;
   }
-}
 
-function defaultPermissions(role: string) {
-  const defaults: Record<string, { allowedPages: string[]; allowAllLocations: boolean }> = {
-    Admin: {
-      allowedPages: [
-        "dashboard",
-        "crm",
-        "products",
-        "inventory",
-        "sales",
-        "purchase-orders",
-        "suppliers",
-        "warehouses",
-        "warranty",
-        "settings",
-      ],
-      allowAllLocations: true,
-    },
-    Manager: {
-      allowedPages: [
-        "dashboard",
-        "crm",
-        "products",
-        "inventory",
-        "sales",
-        "purchase-orders",
-        "suppliers",
-        "warehouses",
-        "warranty",
-      ],
-      allowAllLocations: true,
-    },
-    Supervisor: {
-      allowedPages: [
-        "dashboard",
-        "products",
-        "inventory",
-        "sales",
-        "purchase-orders",
-        "warehouses",
-        "warranty",
-      ],
-      allowAllLocations: false,
-    },
-    Sales: {
-      allowedPages: ["sales"],
-      allowAllLocations: false,
-    },
-  };
-  return defaults[role] || { allowedPages: [], allowAllLocations: false };
+  const org = await createOrganizationWithDefaults({
+    name: "ShelfSense Demo",
+    businessPhone: "+234 (1) 555-0192",
+    businessAddress: "14 Logistics Way, Ikeja, Lagos",
+  });
+
+  for (const u of DEFAULT_USERS) {
+    const hashedPassword = await bcrypt.hash(u.password, 10);
+    await User.create({ ...u, password: hashedPassword, organizationId: org._id });
+  }
 }
 
 export async function POST(req: Request) {
@@ -146,17 +107,37 @@ export async function POST(req: Request) {
       );
     }
 
+    // Legacy users without organizationId get migrated into the default org
+    if (!user.organizationId) {
+      const { organizationId } = await ensureDefaultOrganizationMigration();
+      user.organizationId = organizationId as typeof user.organizationId;
+      await user.save();
+    }
+
+    const org = await Organization.findById(user.organizationId).lean();
+    if (!org || org.status === "Suspended") {
+      return NextResponse.json(
+        { success: false, error: "Organization is suspended or missing" },
+        { status: 403 }
+      );
+    }
+
     const userObj = user.toObject();
     delete (userObj as { password?: string }).password;
 
-    const permissionsData = await RolePermission.findOne({ role: user.role }).lean();
-    const fallback = defaultPermissions(user.role);
+    const organizationId = user.organizationId.toString();
+    const permissionsData = await RolePermission.findOne({
+      organizationId: user.organizationId,
+      role: user.role,
+    }).lean();
+    const fallback = defaultPermissionsForRole(user.role);
     const allowedPages = permissionsData?.allowedPages || fallback.allowedPages;
     const allowAllLocations = permissionsData?.allowAllLocations ?? fallback.allowAllLocations;
 
     const userData = {
       ...userObj,
       id: userObj._id.toString(),
+      organizationId,
       permissions: {
         allowedPages,
         allowAllLocations,
@@ -169,6 +150,7 @@ export async function POST(req: Request) {
       name: userData.name,
       role: userData.role,
       assignedLocation: userData.assignedLocation,
+      organizationId,
     });
 
     const response = NextResponse.json({

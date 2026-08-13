@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { assertSeedAuthorized } from "@/lib/auth/seedGuard";
+import { ensureDefaultOrganizationMigration } from "@/lib/tenancy/migrateToDefaultOrg";
 import InventoryItem from "@/lib/models/InventoryItem";
 import InventoryMovement from "@/lib/models/InventoryMovement";
 import { INITIAL_INVENTORY_ITEMS } from "@/lib/seed/inventorySeedData";
@@ -11,12 +12,17 @@ export async function POST(req: Request) {
 
   try {
     await connectToDatabase();
-    await InventoryItem.deleteMany({});
-    await InventoryMovement.deleteMany({});
+    const { organizationId } = await ensureDefaultOrganizationMigration();
 
-    const createdItems = await InventoryItem.insertMany(INITIAL_INVENTORY_ITEMS);
+    await InventoryItem.deleteMany({ organizationId });
+    await InventoryMovement.deleteMany({ organizationId });
+
+    const createdItems = await InventoryItem.insertMany(
+      INITIAL_INVENTORY_ITEMS.map((item) => ({ ...item, organizationId }))
+    );
 
     const movementsToCreate = createdItems.map((item) => ({
+      organizationId,
       inventoryItemId: item._id,
       sku: item.sku,
       productName: item.product,

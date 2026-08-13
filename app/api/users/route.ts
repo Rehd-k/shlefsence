@@ -2,13 +2,17 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import User from "@/lib/models/User";
 import bcrypt from "bcrypt";
+import { requireTenantSession, tenantFilter } from "@/lib/auth/apiAuth";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
-    const users = await User.find({}).sort({ name: 1 }).lean();
-    
-    // Format and exclude password
+    const users = await User.find({ organizationId }).sort({ name: 1 }).lean();
+
     const formatted = users.map((u: any) => {
       const { password, ...rest } = u;
       return {
@@ -25,6 +29,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
     const { name, email, password, role, assignedLocation, supervisedLocations, phone, status } = body;
@@ -36,6 +44,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // Email is globally unique (one account = one business)
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return NextResponse.json(
@@ -47,6 +56,7 @@ export async function POST(req: Request) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
+      organizationId,
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
@@ -74,6 +84,10 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
     const { id, name, email, password, role, assignedLocation, supervisedLocations, phone, status } = body;
@@ -82,12 +96,11 @@ export async function PUT(req: Request) {
       return NextResponse.json({ success: false, error: "User ID is required" }, { status: 400 });
     }
 
-    const user = await User.findById(id);
+    const user = await User.findOne(tenantFilter(organizationId, { _id: id }));
     if (!user) {
       return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
     }
 
-    // Check if email is updated and is unique
     if (email && email.toLowerCase() !== user.email) {
       const emailTaken = await User.findOne({ email: email.toLowerCase() });
       if (emailTaken) {
@@ -103,7 +116,6 @@ export async function PUT(req: Request) {
     if (phone !== undefined) user.phone = phone;
     if (status) user.status = status;
 
-    // Hash password if a new one is provided
     if (password && password.trim() !== "") {
       user.password = await bcrypt.hash(password, 10);
     }
@@ -127,6 +139,10 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
@@ -135,7 +151,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: false, error: "User ID is required" }, { status: 400 });
     }
 
-    const deleted = await User.findByIdAndDelete(id);
+    const deleted = await User.findOneAndDelete(tenantFilter(organizationId, { _id: id }));
     if (!deleted) {
       return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
     }

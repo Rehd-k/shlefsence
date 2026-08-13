@@ -1,8 +1,10 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 export type UserRole = "Admin" | "Manager" | "Supervisor" | "Sales";
 
 export interface IUserDocument extends Document {
+  organizationId: OrganizationId;
   name: string;
   email: string;
   password: string;
@@ -17,6 +19,7 @@ export interface IUserDocument extends Document {
 
 const UserSchema = new Schema<IUserDocument>(
   {
+    ...organizationIdField,
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, index: true },
     password: { type: String, required: true },
@@ -28,7 +31,7 @@ const UserSchema = new Schema<IUserDocument>(
     },
     assignedLocation: {
       type: String,
-      default: "Main Hub - Lagos",
+      default: "Main Hub",
       required: true,
     },
     supervisedLocations: {
@@ -44,6 +47,8 @@ const UserSchema = new Schema<IUserDocument>(
   },
   { timestamps: true }
 );
+
+UserSchema.index({ organizationId: 1, role: 1 });
 
 const User: Model<IUserDocument> =
   mongoose.models.User || mongoose.model<IUserDocument>("User", UserSchema);

@@ -1,7 +1,9 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 // --- ZONE ---
 export interface IWarehouseZoneDocument extends Document {
+  organizationId: OrganizationId;
   warehouseId: mongoose.Types.ObjectId | string;
   code: string;
   name: string;
@@ -17,6 +19,7 @@ export interface IWarehouseZoneDocument extends Document {
 
 const WarehouseZoneSchema = new Schema<IWarehouseZoneDocument>(
   {
+    ...organizationIdField,
     warehouseId: { type: Schema.Types.ObjectId, ref: "Warehouse", required: true, index: true },
     code: { type: String, required: true, index: true },
     name: { type: String, required: true },
@@ -40,6 +43,7 @@ export const WarehouseZone: Model<IWarehouseZoneDocument> =
 
 // --- RACK ---
 export interface IWarehouseRackDocument extends Document {
+  organizationId: OrganizationId;
   zoneId: mongoose.Types.ObjectId | string;
   warehouseId: mongoose.Types.ObjectId | string;
   code: string;
@@ -51,6 +55,7 @@ export interface IWarehouseRackDocument extends Document {
 
 const WarehouseRackSchema = new Schema<IWarehouseRackDocument>(
   {
+    ...organizationIdField,
     zoneId: { type: Schema.Types.ObjectId, ref: "WarehouseZone", required: true, index: true },
     warehouseId: { type: Schema.Types.ObjectId, ref: "Warehouse", required: true, index: true },
     code: { type: String, required: true, index: true },
@@ -65,6 +70,7 @@ export const WarehouseRack: Model<IWarehouseRackDocument> =
 
 // --- SHELF ---
 export interface IWarehouseShelfDocument extends Document {
+  organizationId: OrganizationId;
   rackId: mongoose.Types.ObjectId | string;
   zoneId: mongoose.Types.ObjectId | string;
   warehouseId: mongoose.Types.ObjectId | string;
@@ -77,6 +83,7 @@ export interface IWarehouseShelfDocument extends Document {
 
 const WarehouseShelfSchema = new Schema<IWarehouseShelfDocument>(
   {
+    ...organizationIdField,
     rackId: { type: Schema.Types.ObjectId, ref: "WarehouseRack", required: true, index: true },
     zoneId: { type: Schema.Types.ObjectId, ref: "WarehouseZone", required: true },
     warehouseId: { type: Schema.Types.ObjectId, ref: "Warehouse", required: true },
@@ -100,6 +107,7 @@ export interface IBinItem {
 }
 
 export interface IWarehouseBinDocument extends Document {
+  organizationId: OrganizationId;
   shelfId: mongoose.Types.ObjectId | string;
   rackId: mongoose.Types.ObjectId | string;
   zoneId: mongoose.Types.ObjectId | string;
@@ -126,11 +134,12 @@ const BinItemSchema = new Schema<IBinItem>({
 
 const WarehouseBinSchema = new Schema<IWarehouseBinDocument>(
   {
+    ...organizationIdField,
     shelfId: { type: Schema.Types.ObjectId, ref: "WarehouseShelf", required: true },
     rackId: { type: Schema.Types.ObjectId, ref: "WarehouseRack", required: true },
     zoneId: { type: Schema.Types.ObjectId, ref: "WarehouseZone", required: true, index: true },
     warehouseId: { type: Schema.Types.ObjectId, ref: "Warehouse", required: true, index: true },
-    binCode: { type: String, required: true, unique: true, index: true },
+    binCode: { type: String, required: true, index: true },
     maxCapacity: { type: Number, default: 200 },
     currentCount: { type: Number, default: 0 },
     pickVelocity: { type: String, enum: ["HOT", "WARM", "COLD"], default: "WARM" },
@@ -141,6 +150,8 @@ const WarehouseBinSchema = new Schema<IWarehouseBinDocument>(
   },
   { timestamps: true }
 );
+
+WarehouseBinSchema.index({ organizationId: 1, binCode: 1 }, { unique: true });
 
 export const WarehouseBin: Model<IWarehouseBinDocument> =
   mongoose.models.WarehouseBin || mongoose.model<IWarehouseBinDocument>("WarehouseBin", WarehouseBinSchema);

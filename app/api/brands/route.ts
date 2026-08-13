@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import Brand from "@/lib/models/Brand";
+import { requireTenantSession } from "@/lib/auth/apiAuth";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
-    const brands = await Brand.find({}).sort({ name: 1 }).lean();
-    
-    // Format to match Select component options
+    const brands = await Brand.find({ organizationId }).sort({ name: 1 }).lean();
+
     const formatted = brands.map((b: any) => ({
       id: b._id.toString(),
       name: b.name,
@@ -23,6 +27,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
 
@@ -30,7 +38,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Name is required" }, { status: 400 });
     }
 
-    const newBrand = await Brand.create({ name: body.name });
+    const newBrand = await Brand.create({ name: body.name, organizationId });
     const obj = newBrand.toObject();
 
     return NextResponse.json({

@@ -5,6 +5,8 @@ import RolePermission from "@/lib/models/RolePermission";
 import bcrypt from "bcrypt";
 import { createSessionToken, setSessionCookie } from "@/lib/auth/session";
 import { registerSchema } from "@/lib/validators/auth";
+import { createOrganizationWithDefaults } from "@/lib/tenancy/bootstrapOrganization";
+import { defaultPermissionsForRole } from "@/lib/tenancy/defaultPermissions";
 
 export async function POST(req: Request) {
   try {
@@ -18,7 +20,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, email, password, role, assignedLocation } = parsed.data;
+    const { name, email, password, businessName, businessPhone, businessAddress } = parsed.data;
     const phone = typeof body.phone === "string" ? body.phone : "";
 
     const existingUser = await User.findOne({ email: email.toLowerCase() });
@@ -29,14 +31,21 @@ export async function POST(req: Request) {
       );
     }
 
+    const org = await createOrganizationWithDefaults({
+      name: businessName,
+      businessPhone: businessPhone || "",
+      businessAddress: businessAddress || "",
+    });
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
+      organizationId: org._id,
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
-      role: role || "Sales",
-      assignedLocation: assignedLocation || "Main Hub - Lagos",
+      role: "Admin",
+      assignedLocation: "Main Hub",
       phone,
       status: "Active",
     });
@@ -44,69 +53,19 @@ export async function POST(req: Request) {
     const userObj = user.toObject();
     delete (userObj as { password?: string }).password;
 
-    const permissionsData = await RolePermission.findOne({ role: user.role }).lean();
-    let allowedPages: string[] = [];
-    let allowAllLocations = false;
+    const permissionsData = await RolePermission.findOne({
+      organizationId: org._id,
+      role: user.role,
+    }).lean();
+    const fallback = defaultPermissionsForRole(user.role);
+    const allowedPages = permissionsData?.allowedPages || fallback.allowedPages;
+    const allowAllLocations = permissionsData?.allowAllLocations ?? fallback.allowAllLocations;
 
-    if (permissionsData) {
-      allowedPages = permissionsData.allowedPages || [];
-      allowAllLocations = permissionsData.allowAllLocations ?? false;
-    } else {
-      const defaults: Record<string, { allowedPages: string[]; allowAllLocations: boolean }> = {
-        Admin: {
-          allowedPages: [
-            "dashboard",
-            "crm",
-            "products",
-            "inventory",
-            "sales",
-            "purchase-orders",
-            "suppliers",
-            "warehouses",
-            "warranty",
-            "settings",
-          ],
-          allowAllLocations: true,
-        },
-        Manager: {
-          allowedPages: [
-            "dashboard",
-            "crm",
-            "products",
-            "inventory",
-            "sales",
-            "purchase-orders",
-            "suppliers",
-            "warehouses",
-            "warranty",
-          ],
-          allowAllLocations: true,
-        },
-        Supervisor: {
-          allowedPages: [
-            "dashboard",
-            "products",
-            "inventory",
-            "sales",
-            "purchase-orders",
-            "warehouses",
-            "warranty",
-          ],
-          allowAllLocations: false,
-        },
-        Sales: {
-          allowedPages: ["sales"],
-          allowAllLocations: false,
-        },
-      };
-      const d = defaults[user.role] || { allowedPages: [], allowAllLocations: false };
-      allowedPages = d.allowedPages;
-      allowAllLocations = d.allowAllLocations;
-    }
-
+    const organizationId = org._id.toString();
     const data = {
       ...userObj,
       id: userObj._id.toString(),
+      organizationId,
       permissions: {
         allowedPages,
         allowAllLocations,
@@ -119,6 +78,7 @@ export async function POST(req: Request) {
       name: data.name,
       role: data.role,
       assignedLocation: data.assignedLocation,
+      organizationId,
     });
 
     const response = NextResponse.json({

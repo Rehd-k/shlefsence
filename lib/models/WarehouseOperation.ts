@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 // --- RECEIVING ---
 export interface IReceivingItem {
@@ -11,6 +12,7 @@ export interface IReceivingItem {
 }
 
 export interface IWarehouseReceivingDocument extends Document {
+  organizationId: OrganizationId;
   receiptNumber: string;
   supplierName: string;
   poNumber?: string;
@@ -33,7 +35,8 @@ const ReceivingItemSchema = new Schema<IReceivingItem>({
 
 const WarehouseReceivingSchema = new Schema<IWarehouseReceivingDocument>(
   {
-    receiptNumber: { type: String, required: true, unique: true, index: true },
+    ...organizationIdField,
+    receiptNumber: { type: String, required: true, index: true },
     supplierName: { type: String, required: true },
     poNumber: { type: String },
     warehouseId: { type: Schema.Types.ObjectId, ref: "Warehouse", required: true, index: true },
@@ -43,6 +46,8 @@ const WarehouseReceivingSchema = new Schema<IWarehouseReceivingDocument>(
   },
   { timestamps: true }
 );
+
+WarehouseReceivingSchema.index({ organizationId: 1, receiptNumber: 1 }, { unique: true });
 
 export const WarehouseReceiving: Model<IWarehouseReceivingDocument> =
   mongoose.models.WarehouseReceiving ||
@@ -59,6 +64,7 @@ export interface IPickingItem {
 }
 
 export interface IWarehousePickingDocument extends Document {
+  organizationId: OrganizationId;
   ticketNumber: string;
   orderId: string;
   customerName: string;
@@ -81,7 +87,8 @@ const PickingItemSchema = new Schema<IPickingItem>({
 
 const WarehousePickingSchema = new Schema<IWarehousePickingDocument>(
   {
-    ticketNumber: { type: String, required: true, unique: true, index: true },
+    ...organizationIdField,
+    ticketNumber: { type: String, required: true, index: true },
     orderId: { type: String, required: true },
     customerName: { type: String, required: true },
     warehouseId: { type: Schema.Types.ObjectId, ref: "Warehouse", required: true, index: true },
@@ -92,12 +99,15 @@ const WarehousePickingSchema = new Schema<IWarehousePickingDocument>(
   { timestamps: true }
 );
 
+WarehousePickingSchema.index({ organizationId: 1, ticketNumber: 1 }, { unique: true });
+
 export const WarehousePicking: Model<IWarehousePickingDocument> =
   mongoose.models.WarehousePicking ||
   mongoose.model<IWarehousePickingDocument>("WarehousePicking", WarehousePickingSchema);
 
 // --- PACKING ---
 export interface IWarehousePackingDocument extends Document {
+  organizationId: OrganizationId;
   packNumber: string;
   pickTicketId: string;
   warehouseId: mongoose.Types.ObjectId | string;
@@ -112,7 +122,8 @@ export interface IWarehousePackingDocument extends Document {
 
 const WarehousePackingSchema = new Schema<IWarehousePackingDocument>(
   {
-    packNumber: { type: String, required: true, unique: true, index: true },
+    ...organizationIdField,
+    packNumber: { type: String, required: true, index: true },
     pickTicketId: { type: String, required: true },
     warehouseId: { type: Schema.Types.ObjectId, ref: "Warehouse", required: true },
     packageType: {
@@ -127,6 +138,8 @@ const WarehousePackingSchema = new Schema<IWarehousePackingDocument>(
   },
   { timestamps: true }
 );
+
+WarehousePackingSchema.index({ organizationId: 1, packNumber: 1 }, { unique: true });
 
 export const WarehousePacking: Model<IWarehousePackingDocument> =
   mongoose.models.WarehousePacking ||
@@ -144,6 +157,7 @@ export interface ICycleCountBin {
 }
 
 export interface IWarehouseCycleCountDocument extends Document {
+  organizationId: OrganizationId;
   countId: string;
   title: string;
   warehouseId: mongoose.Types.ObjectId | string;
@@ -167,7 +181,8 @@ const CycleCountBinSchema = new Schema<ICycleCountBin>({
 
 const WarehouseCycleCountSchema = new Schema<IWarehouseCycleCountDocument>(
   {
-    countId: { type: String, required: true, unique: true, index: true },
+    ...organizationIdField,
+    countId: { type: String, required: true, index: true },
     title: { type: String, required: true },
     warehouseId: { type: Schema.Types.ObjectId, ref: "Warehouse", required: true },
     zoneName: { type: String, required: true },
@@ -177,6 +192,8 @@ const WarehouseCycleCountSchema = new Schema<IWarehouseCycleCountDocument>(
   },
   { timestamps: true }
 );
+
+WarehouseCycleCountSchema.index({ organizationId: 1, countId: 1 }, { unique: true });
 
 export const WarehouseCycleCount: Model<IWarehouseCycleCountDocument> =
   mongoose.models.WarehouseCycleCount ||
@@ -192,6 +209,7 @@ export interface ITransferItem {
 }
 
 export interface IWarehouseTransferDocument extends Document {
+  organizationId: OrganizationId;
   transferNumber: string;
   sourceWarehouseId: mongoose.Types.ObjectId | string;
   sourceWarehouseName: string;
@@ -214,7 +232,8 @@ const TransferItemSchema = new Schema<ITransferItem>({
 
 const WarehouseTransferSchema = new Schema<IWarehouseTransferDocument>(
   {
-    transferNumber: { type: String, required: true, unique: true, index: true },
+    ...organizationIdField,
+    transferNumber: { type: String, required: true, index: true },
     sourceWarehouseId: { type: Schema.Types.ObjectId, ref: "Warehouse", required: true },
     sourceWarehouseName: { type: String, required: true },
     targetWarehouseId: { type: Schema.Types.ObjectId, ref: "Warehouse", required: true },
@@ -225,6 +244,8 @@ const WarehouseTransferSchema = new Schema<IWarehouseTransferDocument>(
   },
   { timestamps: true }
 );
+
+WarehouseTransferSchema.index({ organizationId: 1, transferNumber: 1 }, { unique: true });
 
 export const WarehouseTransfer: Model<IWarehouseTransferDocument> =
   mongoose.models.WarehouseTransfer ||

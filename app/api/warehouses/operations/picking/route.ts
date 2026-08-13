@@ -4,14 +4,21 @@ import { WarehousePicking } from "@/lib/models/WarehouseOperation";
 import { WarehouseBin } from "@/lib/models/WarehouseLocation";
 import InventoryItem from "@/lib/models/InventoryItem";
 import InventoryMovement from "@/lib/models/InventoryMovement";
+import { requireTenantSession, tenantFilter } from "@/lib/auth/apiAuth";
 
 export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const warehouseId = searchParams.get("warehouseId");
 
-    const query = warehouseId ? { warehouseId } : {};
+    const query = warehouseId
+      ? tenantFilter(organizationId, { warehouseId })
+      : { organizationId };
     const pickings = await WarehousePicking.find(query).sort({ createdAt: -1 }).lean();
 
     const formatted = pickings.map((p: any) => ({
@@ -27,10 +34,14 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
 
-    const newPicking = await WarehousePicking.create(body);
+    const newPicking = await WarehousePicking.create({ ...body, organizationId });
     const obj = newPicking.toObject();
 
     return NextResponse.json({
@@ -44,11 +55,15 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
     const { id, sku, pickedQty, performedBy } = body;
 
-    const picking = await WarehousePicking.findById(id);
+    const picking = await WarehousePicking.findOne(tenantFilter(organizationId, { _id: id }));
     if (!picking) {
       return NextResponse.json({ success: false, error: "Pick ticket not found" }, { status: 404 });
     }
@@ -58,8 +73,9 @@ export async function PUT(req: Request) {
       item.pickedQty = Number(pickedQty);
       item.status = item.pickedQty >= item.requestedQty ? "Picked" : "Pending";
 
-      // Check if bin stock exists
-      const bin = await WarehouseBin.findOne({ binCode: item.binCode });
+      const bin = await WarehouseBin.findOne(
+        tenantFilter(organizationId, { binCode: item.binCode })
+      );
       if (bin) {
         const binItem = bin.items.find((i) => i.sku === sku);
         if (binItem) {
@@ -70,14 +86,14 @@ export async function PUT(req: Request) {
         await bin.save();
       }
 
-      // Sync with global InventoryItem & create InventoryMovement log
-      let invItem = await InventoryItem.findOne({ sku });
+      let invItem = await InventoryItem.findOne(tenantFilter(organizationId, { sku }));
       if (invItem) {
         const prevQty = invItem.quantity;
         invItem.quantity = Math.max(0, invItem.quantity - Number(pickedQty));
         await invItem.save();
 
         await InventoryMovement.create({
+          organizationId,
           inventoryItemId: invItem._id,
           sku: invItem.sku,
           productName: invItem.product,

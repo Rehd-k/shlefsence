@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import Customer from "@/lib/models/Customer";
+import { requireTenantSession } from "@/lib/auth/apiAuth";
+
 export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
 
     const { searchParams } = new URL(req.url);
@@ -11,7 +17,7 @@ export async function GET(req: Request) {
     const sortBy = searchParams.get("sortBy") || "newest";
     const warehouse = searchParams.get("warehouse") || "";
 
-    const query: any = {};
+    const query: Record<string, unknown> = { organizationId };
 
     if (warehouse && warehouse !== "All Locations" && warehouse !== "All Warehouses") {
       query.warehouse = warehouse;
@@ -32,7 +38,7 @@ export async function GET(req: Request) {
       query.customerType = customerType;
     }
 
-    let sortOptions: any = { createdAt: -1 };
+    let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };
     if (sortBy === "debt_desc") {
       sortOptions = { outstandingDebt: -1 };
     } else if (sortBy === "wallet_desc") {
@@ -59,6 +65,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
     const { parseBody } = await import("@/lib/validators/parse");
@@ -91,6 +101,7 @@ export async function POST(req: Request) {
 
     const newCustomer = await Customer.create({
       ...bodyData,
+      organizationId,
       avatarColor: (bodyData.avatarColor as string) || randomAvatar,
       outstandingDebt: Number(bodyData.outstandingDebt) || 0,
       walletBalance: Number(bodyData.walletBalance) || 0,

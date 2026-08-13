@@ -1,15 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { lean, sort, find, connectToDatabase } = vi.hoisted(() => {
+const { lean, sort, find, connectToDatabase, requireTenantSession } = vi.hoisted(() => {
   const lean = vi.fn();
   const sort = vi.fn(() => ({ lean }));
   const find = vi.fn(() => ({ sort }));
   const connectToDatabase = vi.fn().mockResolvedValue(undefined);
-  return { lean, sort, find, connectToDatabase };
+  const requireTenantSession = vi.fn();
+  return { lean, sort, find, connectToDatabase, requireTenantSession };
 });
 
 vi.mock("@/lib/db/mongodb", () => ({
   connectToDatabase,
+}));
+
+vi.mock("@/lib/auth/apiAuth", () => ({
+  requireTenantSession,
+  tenantFilter: (organizationId: string, extra: Record<string, unknown> = {}) => ({
+    organizationId,
+    ...extra,
+  }),
+  actorName: (s: { name?: string; email?: string }) => s.name || s.email || "System",
 }));
 
 vi.mock("@/lib/models/InventoryMovement", () => ({
@@ -22,6 +32,17 @@ describe("GET /api/inventory/[id]/movements", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     connectToDatabase.mockResolvedValue(undefined);
+    requireTenantSession.mockResolvedValue({
+      session: {
+        sub: "u1",
+        email: "a@b.com",
+        name: "Admin",
+        role: "Admin",
+        assignedLocation: "Main Hub",
+        organizationId: "aaaaaaaaaaaaaaaaaaaaaaaa",
+      },
+      organizationId: "aaaaaaaaaaaaaaaaaaaaaaaa",
+    });
   });
 
   it("returns empty list without seed fallback", async () => {

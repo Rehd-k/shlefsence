@@ -4,11 +4,16 @@ import { WarehouseTransfer } from "@/lib/models/WarehouseOperation";
 import { WarehouseBin } from "@/lib/models/WarehouseLocation";
 import InventoryItem from "@/lib/models/InventoryItem";
 import InventoryMovement from "@/lib/models/InventoryMovement";
+import { requireTenantSession, tenantFilter } from "@/lib/auth/apiAuth";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
-    const transfers = await WarehouseTransfer.find({}).sort({ createdAt: -1 }).lean();
+    const transfers = await WarehouseTransfer.find({ organizationId }).sort({ createdAt: -1 }).lean();
 
     const formatted = transfers.map((t: any) => ({
       ...t,
@@ -23,10 +28,14 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
 
-    const newTransfer = await WarehouseTransfer.create(body);
+    const newTransfer = await WarehouseTransfer.create({ ...body, organizationId });
     const obj = newTransfer.toObject();
 
     return NextResponse.json({
@@ -40,11 +49,15 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
     const { id, status, performedBy } = body;
 
-    const transfer = await WarehouseTransfer.findById(id);
+    const transfer = await WarehouseTransfer.findOne(tenantFilter(organizationId, { _id: id }));
     if (!transfer) {
       return NextResponse.json({ success: false, error: "Transfer document not found" }, { status: 404 });
     }
@@ -55,8 +68,9 @@ export async function PUT(req: Request) {
 
     if (status === "Completed" && prevStatus !== "Completed") {
       for (const item of transfer.items) {
-        // Deduct from source bin
-        const srcBin = await WarehouseBin.findOne({ binCode: item.sourceBinCode });
+        const srcBin = await WarehouseBin.findOne(
+          tenantFilter(organizationId, { binCode: item.sourceBinCode })
+        );
         if (srcBin) {
           const binItem = srcBin.items.find((i) => i.sku === item.sku);
           if (binItem) {
@@ -66,9 +80,10 @@ export async function PUT(req: Request) {
           await srcBin.save();
         }
 
-        // Add to target bin if targetBinCode specified
         if (item.targetBinCode) {
-          let tgtBin = await WarehouseBin.findOne({ binCode: item.targetBinCode });
+          let tgtBin = await WarehouseBin.findOne(
+            tenantFilter(organizationId, { binCode: item.targetBinCode })
+          );
           if (tgtBin) {
             const tgtItem = tgtBin.items.find((i) => i.sku === item.sku);
             if (tgtItem) {
@@ -81,10 +96,12 @@ export async function PUT(req: Request) {
           }
         }
 
-        // Log movement
-        let invItem = await InventoryItem.findOne({ sku: item.sku });
+        let invItem = await InventoryItem.findOne(
+          tenantFilter(organizationId, { sku: item.sku })
+        );
         if (invItem) {
           await InventoryMovement.create({
+            organizationId,
             inventoryItemId: invItem._id,
             sku: invItem.sku,
             productName: invItem.product,

@@ -1,7 +1,9 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { MovementType } from "@/lib/types/inventory";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 export interface IInventoryMovementDocument extends Document {
+  organizationId: OrganizationId;
   inventoryItemId: mongoose.Types.ObjectId | string;
   sku: string;
   productName: string;
@@ -20,6 +22,7 @@ export interface IInventoryMovementDocument extends Document {
 
 const InventoryMovementSchema = new Schema<IInventoryMovementDocument>(
   {
+    ...organizationIdField,
     inventoryItemId: { type: Schema.Types.ObjectId, ref: "InventoryItem", required: true, index: true },
     sku: { type: String, required: true, index: true },
     productName: { type: String, required: true },
@@ -43,6 +46,8 @@ const InventoryMovementSchema = new Schema<IInventoryMovementDocument>(
     timestamps: { createdAt: true, updatedAt: false },
   }
 );
+
+InventoryMovementSchema.index({ organizationId: 1, inventoryItemId: 1, createdAt: -1 });
 
 const InventoryMovement: Model<IInventoryMovementDocument> =
   mongoose.models.InventoryMovement ||

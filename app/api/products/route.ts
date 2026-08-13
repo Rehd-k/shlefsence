@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import Product from "@/lib/models/Product";
+import { requireTenantSession } from "@/lib/auth/apiAuth";
 
 export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
 
     const { searchParams } = new URL(req.url);
@@ -12,7 +17,7 @@ export async function GET(req: Request) {
     const category = searchParams.get("category") || "";
     const quality = searchParams.get("quality") || "";
 
-    const query: any = {};
+    const query: Record<string, unknown> = { organizationId };
 
     if (search) {
       query.$or = [
@@ -41,6 +46,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
     const { parseBody } = await import("@/lib/validators/parse");
@@ -48,7 +57,7 @@ export async function POST(req: Request) {
     const parsed = parseBody(productCreateSchema, body);
     if ("error" in parsed) return parsed.error;
 
-    const newProduct = await Product.create(parsed.data);
+    const newProduct = await Product.create({ ...parsed.data, organizationId });
     const obj = newProduct.toObject();
 
     return NextResponse.json({

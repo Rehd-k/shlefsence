@@ -2,9 +2,14 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import InventoryItem from "@/lib/models/InventoryItem";
 import InventoryMovement from "@/lib/models/InventoryMovement";
+import { requireTenantSession, actorName } from "@/lib/auth/apiAuth";
 
 export async function GET(request: Request) {
   try {
+    const auth = await requireTenantSession(request);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
     const warehouse = searchParams.get("warehouse") || "";
@@ -15,7 +20,7 @@ export async function GET(request: Request) {
     const status = searchParams.get("status") || "";
 
     await connectToDatabase();
-    const query: any = {};
+    const query: Record<string, unknown> = { organizationId };
 
     if (search) {
       query.$or = [
@@ -55,18 +60,21 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireTenantSession(request);
+    if ("error" in auth) return auth.error;
+    const { organizationId, session } = auth;
+
     const body = await request.json();
     await connectToDatabase();
     const { parseBody } = await import("@/lib/validators/parse");
     const { inventoryCreateSchema } = await import("@/lib/validators/inventory");
     const parsed = parseBody(inventoryCreateSchema, body);
     if ("error" in parsed) return parsed.error;
-    const { getSessionFromRequest } = await import("@/lib/auth/session");
-    const session = await getSessionFromRequest(request);
-    const newItem = await InventoryItem.create(parsed.data);
 
-    // Create movement entry for initial import
+    const newItem = await InventoryItem.create({ ...parsed.data, organizationId });
+
     await InventoryMovement.create({
+      organizationId,
       inventoryItemId: newItem._id,
       sku: newItem.sku,
       productName: newItem.product,
@@ -77,7 +85,7 @@ export async function POST(request: Request) {
       toWarehouse: newItem.warehouse,
       toShelf: newItem.shelf,
       reason: "Initial item creation in ERP",
-      performedBy: session?.name || "System",
+      performedBy: actorName(session),
     });
 
     return NextResponse.json({ success: true, data: newItem }, { status: 201 });

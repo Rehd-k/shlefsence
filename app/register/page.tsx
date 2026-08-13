@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth, UserRole } from "@/lib/context/AuthContext";
-import { Mail, Lock, User, Phone, MapPin, ArrowRight } from "lucide-react";
+import { useAuth } from "@/lib/context/AuthContext";
+import { Mail, Lock, User, Building2, Phone, MapPin, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 
@@ -15,19 +15,15 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("Sales");
-  const [assignedLocation, setAssignedLocation] = useState("Main Hub - Lagos");
-  const [phone, setPhone] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [businessPhone, setBusinessPhone] = useState("");
+  const [businessAddress, setBusinessAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && user) {
-      if (user.role === "Sales") {
-        router.push("/sales");
-      } else {
-        router.push("/");
-      }
+      router.push("/");
     }
   }, [user, authLoading, router]);
 
@@ -41,22 +37,25 @@ export default function RegisterPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name, email, password, role, assignedLocation, phone }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          businessName,
+          businessPhone,
+          businessAddress,
+        }),
       });
       const json = await res.json();
 
       if (json.success && json.data) {
         login(json.data);
-        if (role === "Sales") {
-          router.push("/sales");
-        } else {
-          router.push("/");
-        }
+        router.push("/");
       } else {
         setError(json.error || "Registration failed");
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -71,8 +70,10 @@ export default function RegisterPage() {
             surface="onDark"
             className="mx-auto rounded-2xl shadow-lg shadow-indigo-500/30"
           />
-          <h1 className="text-2xl font-black tracking-tight text-white">Create Account</h1>
-          <p className="text-xs text-slate-400">Join ShelfSense ERP for multi-hub phone parts distribution</p>
+          <h1 className="text-2xl font-black tracking-tight text-white">Create your business</h1>
+          <p className="text-xs text-slate-400">
+            Register your organization. You become the Admin — your data stays isolated.
+          </p>
         </div>
 
         {error && (
@@ -83,7 +84,26 @@ export default function RegisterPage() {
 
         <form onSubmit={handleRegister} className="space-y-4 text-xs">
           <div>
-            <label className="font-bold uppercase tracking-wider text-slate-400 mb-1 block">Full Name</label>
+            <label className="font-bold uppercase tracking-wider text-slate-400 mb-1 block">
+              Business Name
+            </label>
+            <div className="relative">
+              <Building2 className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                required
+                placeholder="e.g. Lagos Parts Hub"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="font-bold uppercase tracking-wider text-slate-400 mb-1 block">
+              Your Full Name
+            </label>
             <div className="relative">
               <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
               <input
@@ -98,13 +118,15 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="font-bold uppercase tracking-wider text-slate-400 mb-1 block">Email Address</label>
+            <label className="font-bold uppercase tracking-wider text-slate-400 mb-1 block">
+              Email Address
+            </label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
               <input
                 type="email"
                 required
-                placeholder="user@shelfsense.ng"
+                placeholder="you@business.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -113,12 +135,15 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="font-bold uppercase tracking-wider text-slate-400 mb-1 block">Password</label>
+            <label className="font-bold uppercase tracking-wider text-slate-400 mb-1 block">
+              Password
+            </label>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
               <input
                 type="password"
                 required
+                minLength={8}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -127,33 +152,35 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="font-bold uppercase tracking-wider text-slate-400 mb-1 block">Role</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
-                className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white font-semibold focus:outline-none"
-              >
-                <option value="Admin">Admin</option>
-                <option value="Manager">Manager</option>
-                <option value="Supervisor">Supervisor</option>
-                <option value="Sales">Sales Staff</option>
-              </select>
+          <div>
+            <label className="font-bold uppercase tracking-wider text-slate-400 mb-1 block">
+              Business Phone (optional)
+            </label>
+            <div className="relative">
+              <Phone className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                placeholder="+234..."
+                value={businessPhone}
+                onChange={(e) => setBusinessPhone(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
             </div>
+          </div>
 
-            <div>
-              <label className="font-bold uppercase tracking-wider text-slate-400 mb-1 block">Assigned Location</label>
-              <select
-                value={assignedLocation}
-                onChange={(e) => setAssignedLocation(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white font-semibold focus:outline-none"
-              >
-                <option value="Main Hub - Lagos">Main Hub - Lagos</option>
-                <option value="Ikeja Shop Counter">Ikeja Shop Counter</option>
-                <option value="Abuja Central Hub">Abuja Central Hub</option>
-                <option value="Port Harcourt Depot">Port Harcourt Depot</option>
-              </select>
+          <div>
+            <label className="font-bold uppercase tracking-wider text-slate-400 mb-1 block">
+              Business Address (optional)
+            </label>
+            <div className="relative">
+              <MapPin className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                placeholder="Street, city"
+                value={businessAddress}
+                onChange={(e) => setBusinessAddress(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
             </div>
           </div>
 
@@ -164,7 +191,7 @@ export default function RegisterPage() {
             size="lg"
             className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-600/20 text-xs tracking-wide"
           >
-            Create Account & Continue <ArrowRight className="w-4 h-4 ml-1" />
+            Create Business & Continue <ArrowRight className="w-4 h-4 ml-1" />
           </Button>
         </form>
 

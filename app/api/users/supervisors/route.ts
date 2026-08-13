@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import User from "@/lib/models/User";
+import { requireTenantSession, tenantFilter } from "@/lib/auth/apiAuth";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
-    
-    // Find all users who have Supervisor role and are Active
-    const supervisors = await User.find({
-      role: "Supervisor",
-      status: "Active",
-    })
+
+    const supervisors = await User.find(
+      tenantFilter(organizationId, {
+        role: "Supervisor",
+        status: "Active",
+      })
+    )
       .select("_id name email")
       .sort({ name: 1 })
       .lean();

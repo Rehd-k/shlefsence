@@ -4,14 +4,21 @@ import { WarehouseReceiving } from "@/lib/models/WarehouseOperation";
 import { WarehouseBin } from "@/lib/models/WarehouseLocation";
 import InventoryItem from "@/lib/models/InventoryItem";
 import InventoryMovement from "@/lib/models/InventoryMovement";
+import { requireTenantSession, tenantFilter } from "@/lib/auth/apiAuth";
 
 export async function GET(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const warehouseId = searchParams.get("warehouseId");
 
-    const query = warehouseId ? { warehouseId } : {};
+    const query = warehouseId
+      ? tenantFilter(organizationId, { warehouseId })
+      : { organizationId };
     const receivings = await WarehouseReceiving.find(query).sort({ createdAt: -1 }).lean();
 
     const formatted = receivings.map((r: any) => ({
@@ -27,10 +34,14 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
 
-    const newReceiving = await WarehouseReceiving.create(body);
+    const newReceiving = await WarehouseReceiving.create({ ...body, organizationId });
     const obj = newReceiving.toObject();
 
     return NextResponse.json({
@@ -44,11 +55,17 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    const auth = await requireTenantSession(req);
+    if ("error" in auth) return auth.error;
+    const { organizationId } = auth;
+
     await connectToDatabase();
     const body = await req.json();
     const { id, action, binCode, sku, quantity, performedBy } = body;
 
-    const receiving = await WarehouseReceiving.findById(id);
+    const receiving = await WarehouseReceiving.findOne(
+      tenantFilter(organizationId, { _id: id })
+    );
     if (!receiving) {
       return NextResponse.json({ success: false, error: "Receiving order not found" }, { status: 404 });
     }
@@ -69,8 +86,7 @@ export async function PUT(req: Request) {
       }
       await receiving.save();
 
-      // Update WarehouseBin
-      let bin = await WarehouseBin.findOne({ binCode });
+      let bin = await WarehouseBin.findOne(tenantFilter(organizationId, { binCode }));
       if (bin) {
         const existingItem = bin.items.find((i) => i.sku === sku);
         if (existingItem) {
@@ -87,14 +103,14 @@ export async function PUT(req: Request) {
         await bin.save();
       }
 
-      // Sync with global InventoryItem & create InventoryMovement log
-      let invItem = await InventoryItem.findOne({ sku });
+      let invItem = await InventoryItem.findOne(tenantFilter(organizationId, { sku }));
       if (invItem) {
         const prevQty = invItem.quantity;
         invItem.quantity += Number(quantity);
         await invItem.save();
 
         await InventoryMovement.create({
+          organizationId,
           inventoryItemId: invItem._id,
           sku: invItem.sku,
           productName: invItem.product,

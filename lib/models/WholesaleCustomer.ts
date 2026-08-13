@@ -1,6 +1,8 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { organizationIdField, type OrganizationId } from "@/lib/tenancy/schema";
 
 export interface IWholesaleCustomerDocument extends Document {
+  organizationId: OrganizationId;
   name: string;
   companyName: string;
   email: string;
@@ -19,9 +21,10 @@ export interface IWholesaleCustomerDocument extends Document {
 
 const WholesaleCustomerSchema = new Schema<IWholesaleCustomerDocument>(
   {
+    ...organizationIdField,
     name: { type: String, required: true, index: true },
     companyName: { type: String, required: true, index: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, required: true, index: true },
     phone: { type: String, required: true },
     tier: {
       type: String,
@@ -46,6 +49,8 @@ const WholesaleCustomerSchema = new Schema<IWholesaleCustomerDocument>(
     timestamps: true,
   }
 );
+
+WholesaleCustomerSchema.index({ organizationId: 1, email: 1 }, { unique: true });
 
 const WholesaleCustomer: Model<IWholesaleCustomerDocument> =
   mongoose.models.WholesaleCustomer ||
